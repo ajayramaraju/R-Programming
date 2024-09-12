@@ -1,0 +1,431 @@
+---
+title: "Week 12 materials"
+author: "Biagio Palese"
+date: "`r format(Sys.time(), '%d %B, %Y')`" 
+output: 
+  html_document:
+    theme: flatly
+    toc: TRUE
+    toc_float: TRUE
+    code_download: TRUE
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE, cache = F}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  error = TRUE,
+  warning= FALSE,
+  message= FALSE)
+```
+
+# Supervised modeling beyond the basic
+
+
+In the second part of the course we will mainly leverage the following resources:
+
+-   The Tidy Modeling with R book [second portion of the course book](https://www.tmwr.org)
+-   The Tidy Models website [second portion of the course website](https://www.tidymodels.org)
+
+#### Link to other resources
+
+-   Internal help: [posit support](https://support.posit.co/hc/en-us)
+
+-   External help: [stackoverflow](https://stackoverflow.com/search?q=rstudio&s=25d8522e-3191-4bf2-ae3b-ccad762aeca9)
+
+-   Additional materials: [posit resources](https://posit.co/resources/)
+
+-   Cheat Sheets: [posit cheat sheets](https://posit.co/resources/cheatsheets/)
+
+While I use them as a reference the materials provided to you are custom made and include more activities and resources. If you understand the materials covered in this document there is no need to refer to other sources. If you have any troubles with the materials don't hesitate to contact me or check the above sources.
+
+![Data Science model: Artwork by @allison_horst](environmental-data-science-r4ds-general.png)
+
+### Class Objectives
+
+-   Going beyond the basic by making predictions and assessing multiple models.
+
+#### Installing and Loading necessary packages
+
+```{r}
+#install.packages("tidymodels")
+install.packages("corrplot")
+install.packages("janitor")
+library(tidymodels)
+library(corrplot)
+library(janitor)
+```
+
+#### Exploring the `ames` Dataset
+
+Introduce the `ames` housing data as an example. Briefly explore the dataset to understand the variables and the modeling objective (predicting house prices).
+
+```{r}
+data(ames, package = "modeldata")
+?ames
+glimpse(ames)
+view(ames)
+
+```
+
+The `ames` housing dataset will be used as a case study for this section of the course, demonstrating the practical application of predictive modeling techniques.
+
+## Some additional useful/required steps
+
+So far we have covered the basic of modeling and we have learned how to create recipes, define models and embed them into workflows. However, from experience there is a set of other things that are important and need to be taken care in addition of what we learned in the model basic part.
+
+### Data cleaning and generalizable manipulations
+
+Clean the data and make model independent useful manipulations first.
+
+```{r}
+ames_clean <- ames |> 
+  clean_names() |> 
+  #clean column name and put everything lowercase thanks to the janitor package
+  mutate(price_log= log(sale_price ,base = 10), 
+         total_sf= total_bsmt_sf+first_flr_sf+second_flr_sf,
+         total_bath= bsmt_full_bath+bsmt_half_bath+full_bath+half_bath)
+    # apply manipulations that are needed across multiple models
+
+glimpse(ames_clean)
+
+
+```
+
+### Check variables correlations
+
+Check variables correlation second.
+
+```{r}
+correlation_matrix <- ames_clean |> 
+  select_if(is.numeric) |> 
+  select(1:4, 17, 31:32, 35:37 ) |> 
+  cor(use = "complete.obs")# exploring correlation is a great step to identify those variables that seem to have a relation between each other and with your dependent variable.  
+?cor
+correlation_matrix |> 
+  corrplot()# visualizing the matrix make it is easier and more accessible to check correlation between variables. It is easy to create this visual thanks to the corrplot package
+```
+
+A positive (blue) or negative (red) correlation between two variables indicates the direction of the relationship between them:
+
+-   **Positive Correlation:** A positive correlation indicates that the two variables move in the same direction. When one variable increases, the other variable also tends to increase, and similarly, when one decreases, the other tends to decrease. This relationship reflects a direct association between the variables, where changes in one variable are mirrored by changes in the other in the same direction, either upwards or downwards. The correlation is considered positive whenever its value is greater than 0. A perfect positive correlation, with a coefficient of +1, means that the two variables move in the same direction in a perfectly linear manner.
+
+-   **Negative Correlation:** A negative correlation indicates that the two variables move in the opposite directions. When one variable increases, the other variable tends to decrease, and viceversa. This inverse relationship means that changes in one variable are associated with opposite changes in the other, highlighting an indirect association between them. The correlation is considered negative whenever its value is smaller than 0. A perfect negative correlation, with a coefficient of -1, means that the two variables move in opposite directions in a perfectly linear manner.
+
+**Interpreting Correlations:**
+
+-   **Magnitude of the Coefficient:** The closer the correlation coefficient is to +1 or -1, the stronger the linear relationship between the variables. A correlation of 0 indicates no linear relationship.
+
+-   **Significance of the Correlation:** It's also important to assess the statistical significance of the correlation. A correlation coefficient might indicate a positive or negative relationship, but statistical tests (like a significance test for correlation) can determine if the observed correlation is not likely due to random chance. These tests are beyond the scope of the class but you need to be aware that it is good practice to perform them.
+
+-   **Causation:** It's crucial to remember that correlation does not imply causation. Even if two variables have a strong positive or negative correlation, it does not mean that one variable causes the changes in the other. Other variables, known as confounding variables, could influence the relationship, or it could be coincidental. Regression will help us in understanding how the dependent variable changes with an independent variable, holding other factors constant. This is particularly useful for controlling for potential confounders and examining the specific impact of one variable on another.
+
+-   **Chart interpretation:** By looking at our correlation plot we can tell all variables selected have either a positive correlation or no linear relationship with sale_price. It appears that the stronger correlation is between sale_price and total_sf which means that larger houses tend to sell for higher prices. In the above case year_sold seems to have no linear association with sale_price (indication that this variable can be excluded from our analysis).
+
+##### **Activity 1: Computing, visualizing and interpreting correlation. Write the code to complete the tasks below [write code just below each instruction; for help or queries, use Teams RStudio - Forum channel] - 10 minutes**
+
+```{r}
+# Task a: Create a correlation_matrix2 that includes sale_price, kitchen_abv_gr, tot_rms_abv_grd, fireplaces, garage_cars, garage_area, wood_deck_sf, open_porch_sf, longitude, latitude
+correlation_matrix2 <- ames_clean |> 
+  select(sale_price, kitchen_abv_gr, tot_rms_abv_grd, fireplaces, garage_cars, garage_area, wood_deck_sf, open_porch_sf, longitude, latitude) |> 
+  cor(use = "complete.obs")
+# Task b: Create a plot that visually shows the correlation between the variables.
+correlation_matrix2 |> 
+  corrplot()
+# Task c: Interpret the correlation chart. Here are some prompts for you: What variable/s have positive correlation with sale_price? Pick one and interpret what it means. What about variables with negative correlation? Pick one and interpret what it means. Anything surprising?
+
+
+```
+
+### Data Splitting and Cross-validation
+
+Now that we have checked the correlation and made some changes to our ames dataset, we can move back to modeling. So far we have run our models on the entire ames dataset. However, by doing so we have no data left to evaluate and assess our model performance on unseen data. Here are the two commonly used methods to preserve data for assessing models performance:
+
+-   Data Splitting
+
+-   Cross-validation
+
+While a simple train-test split is quicker and easier, especially for exploratory analysis or when computational resources are limited, cross-validation provides a more thorough and unbiased evaluation of the model's performance. The choice between these methods depends on the specific needs of your project, including the size of the dataset, the computational complexity of the models, and the level of accuracy required in the performance estimation. We will see how both methods are used to assess models performance but we will start with the easiest method.
+
+#### Data Splitting
+
+When it comes to data modeling (and model evaluation), one of the most adopted method is to split the data into a training set and a test set from the beginning. Here’s how this simple method can be implemented and its implications:
+
+```{r}
+
+# Split the data
+set.seed(123)# setting a seed will ensure reproducibility
+ames_split <- initial_split(ames_clean, prop = 0.75) # define the split and its data proportion
+ames_train <- training(ames_split) #create a train set
+ames_test <- testing(ames_split)#create a test set
+```
+
+-   **Benefits of Train-Test Split:**
+    -   **Simplicity and Speed:** It's straightforward to understand, implement and computationally less intensive than other methods.
+    -   **Direct Evaluation:** Provides a clear, direct way to assess how the model performs on unseen data.
+-   **Something to consider:**
+    -   **Potential Data Wastage:** Splitting the dataset reduces the amount of data available for training the model, which might be a concern for smaller datasets.
+    -   **Risk of Bias:** If the split is not representative, it can introduce bias in the evaluation, making the model appear to perform better or worse than it actually does. Less robust than other methods.
+
+##### **Activity 2: Data Splitting. Write the code to complete the tasks below [write code just below each instruction; for help or queries, use Teams RStudio - Forum channel] - 5 minutes**
+
+```{r}
+# Task a: Set a random seed to reproduce the data splitting. 
+set.seed(0123)
+# Task b: Define a data split with a 80 proportion names ames_split2. Compare ames_split2 with ames_split.
+ames_split2 <- initial_split(ames_clean, prop = 0.8)
+# Task c: Create a ames_train2 and a ames_test2.
+ames_train2 <- training(ames_split2)
+ames_test2 <- testing(ames_split2)
+
+```
+
+### Example: Making prediction and evaluating different models' prediction performance with data splitting
+
+So far we have learned that we can define different models and that the model selection affect the final results. In this example, we explore the predictions' outcome between using `lm` for standard linear regression and `glmnet` for regularized linear regression (Lasso). We will do that using two very different recipes. Recipe1 will be based on a multiple linear regression model with just total_sf and total_bath (two predictors with the highest correlation with sale_price), while recipe 2 will use all the independent variables in our dataset.
+
+#### Setting up the example recipes
+
+```{r}
+# Define recipe 1
+example_recipe1 <- recipe(price_log ~ total_sf + total_bath, data = ames_train) |>
+  step_normalize(all_numeric_predictors())
+# Review the recipe steps
+example_recipe1
+
+
+# Define recipe 2
+example_recipe2 <- recipe(price_log ~ ., data = ames_train) |>
+  step_normalize(all_numeric_predictors()) |> 
+  step_dummy(all_nominal_predictors())
+# Review the recipe steps
+example_recipe2
+
+```
+
+#### Specifying the two models
+
+We specify two models using `parsnip`: one with the `lm` engine for basic linear regression and another with the `glmnet` engine for Lasso regression, which includes a penalty term to regularize the coefficients.
+
+```{r}
+# Linear regression with lm
+linear_mod_reg <- linear_reg() |>
+  set_engine("lm") |>
+  set_mode("regression")
+
+# Lasso regularized linear regression with glmnet
+linear_mod_lasso <- linear_reg(penalty = 0.1, mixture = 1) |>
+  set_engine("glmnet") |>
+  set_mode("regression")
+```
+
+#### Fitting example models using the workflow
+
+Next, we fit both models to the `ames_train` dataset,so that we can compare their predictions performance on `ames_test`. This is accomplished by embedding the model specifications within `workflows` that also incorporate our preprocessing `recipes`.
+
+```{r}
+# Workflows for linear regression
+recipe1_workflow_reg <- workflow() |>
+  add_recipe(example_recipe1) |>
+  add_model(linear_mod_reg) |>
+  fit(data = ames_train)#we create and fit the workflow on just the train set
+recipe1_workflow_reg |> print() |> tidy()#check model results
+
+recipe2_workflow_reg <- workflow() |>
+  add_recipe(example_recipe2) |>
+  add_model(linear_mod_reg) |>
+  fit(data = ames_train)#we create and fit the workflow on just the train set
+recipe2_workflow_reg |> print() |> tidy()#check model results
+
+# Workflows for lasso
+recipe1_workflow_lasso <- workflow() |>
+  add_recipe(example_recipe1) |>
+  add_model(linear_mod_lasso) |>
+  fit(data = ames_train)#we create and fit the workflow on just the train set
+recipe1_workflow_lasso |> print() |> tidy()#check model results
+
+recipe2_workflow_lasso <- workflow() |>
+  add_recipe(example_recipe2) |>
+  add_model(linear_mod_lasso) |>
+  fit(data = ames_train)#we create and fit the workflow on just the train set
+recipe2_workflow_lasso |> print() |> tidy()#check model results
+```
+
+## Model Comparison and Evaluation
+
+With the models fitted, so far we just took a quick look at the results. However, before learning how to interpret all the models results, we will learn to assess their performance (there is no point in interpreting them if they perform poorly or are "bad" models). This involves making predictions on our test set, and evaluating the models using metrics suited for regression tasks, such as RMSE (Root Mean Squared Error) or MAE (Mean Absolute Error) or R² (Coefficient of Determination).
+
+### Making predictions and Evaluating Model Performance with Data Splitting
+
+```{r}
+# Making predictions for the linear regression models workflows
+recipe1_predictions_reg <- predict(recipe1_workflow_reg, new_data = ames_test) |> # making the prediction on test data (unseen data)
+  bind_cols(ames_test) |> # add original columns
+   mutate(pred = 10^.pred)  # Inverse of log10, easier to interpret the prediction now that are not in a log10 form
+
+recipe1_predictions_reg |> 
+  select(sale_price, pred) |> view()#check the prediction on test data against actual value (truth)
+
+recipe2_predictions_reg <- predict(recipe2_workflow_reg, new_data = ames_test) |> 
+  bind_cols(ames_test) |> # add original columns
+   mutate(pred = 10^.pred)  # Inverse of log10, easier to interpret the prediction now that are not in a log10 form
+# the warning indicates rank deficiency with our model.
+recipe2_predictions_reg |> 
+  select(sale_price, pred) |> view()#check the prediction on test data against actual value (truth)
+
+    
+# Making predictions for the lasso models workflows
+recipe1_predictions_lasso <- predict(recipe1_workflow_lasso, new_data = ames_test) |> 
+  bind_cols(ames_test) |> # add original columns
+   mutate(pred = 10^.pred)  # Inverse of log10, easier to interpret the prediction now that are not in a log10 form
+
+recipe1_predictions_lasso |> 
+  select(sale_price, pred) |> view()#check the prediction on test data against actual value (truth)
+
+recipe2_predictions_lasso <- predict(recipe2_workflow_lasso, new_data = ames_test) |> 
+  bind_cols(ames_test) |> # add original columns
+   mutate(pred = 10^.pred)  # Inverse of log10, easier to interpret the prediction now that are not in a log10 form
+
+recipe2_predictions_lasso |> 
+  select(sale_price, pred) |> view()#check the prediction on test data against actual value (truth)
+
+```
+
+If you guys noticed when we run predictions using the linear regression model with recipe2 (recipe2_predictions_reg) we got a warning. The warning indicated some rank-deficiency fit. This is usually due to:
+
+-   the presence of highly correlated predictors (multicollinearity). Multicollinearity indicates that we have redundant information from some highly correlated predictors, making it difficult to distinguish their individual effects on the dependent variable.
+
+-   the presence of too many predictors in our model. If the model includes too many predictor variables relative to the number of observations, it can lead to a situation where the predictors cannot be uniquely identified. Meaning that there isn't enough independent information in the data to estimate the model's parameters (the coefficients of the predictor variables) with precision.
+
+Possible solutions are check for multicollinearity and using correlation matrix to identify and then remove highly correlated predictors. Or reduce the number of predictors by performing Principal Components Analysis (PCA). PCA is beyond the scope of this class but regularization methods (e.g., Ridge or Lasso regression) are designed to handle multicollinearity (Ridge in particular), high number of predictors (Lasso in particular) and overfitting. For this reason we don't get a warning when we run the lasso model using recipe2.
+
+In conclusion, while the linear regression model with recipe2 runs (and produce just a warning), we should not attempt to interpret the results because they can misleading and lead to bad decisions. For illustrative scope we will keep that model in but we know that in real life we will have to make changes to what predictors are included in it.
+
+*Stopped Here*
+
+#### Creating Model Metrics to Assess Model Prediction Performance
+
+While seeing the predictions next to the actual house values can already provide some insights on the goodness of the model. In regression analysis, model performance is evaluated using specific metrics that quantify the model's accuracy and ability to generalize. Three fundamental metrics are Root Mean Squared Error (RMSE) , Mean Absolute Error (MAE), and R-squared (R²):
+
+-   **Root Mean Squared Error (RMSE):**
+    -   **What It Measures:** RMSE calculates the square root of the average squared differences between the predicted and actual values. It represents the standard deviation of the residuals (prediction errors).
+    -   **Interpretation:** A lower RMSE value indicates better model performance, with 0 being the ideal score. It quantifies how much, on average, the model's predictions deviate from the actual values.
+    -   **Something to consider:** RMSE is sensitive to outliers. High RMSE values may suggest the presence of large errors in some predictions, highlighting potential model weaknesses.
+-   **Mean Absolute Error (MAE)**:
+    -   **What It Measures**: MAE quantifies the average magnitude of the errors between the predicted values and the actual values, focusing solely on the size of errors without considering their direction. It reflects the average distance between predicted and actual values across all predictions.
+    -   **Interpretation**: MAE values range from 0 to infinity, with lower values indicating better model performance. A MAE of 0 means the model perfectly predicts the target variable, although such a scenario is extremely rare in practice.
+    -   **Something to consider**: MAE provides a straightforward and easily interpretable measure of model prediction accuracy. It's particularly useful because it's robust to outliers, making it a reliable metric when dealing with real-world data that may contain anomalies. MAE helps in understanding the typical error magnitude the model might have in its predictions, offering clear insights into the model’s performance.
+-   **R-squared (R²):**
+    -   **What It Measures:** R², also known as the coefficient of determination, quantifies the proportion of the variance in the dependent variable that is predictable from the independent variables. It provides a measure of how well observed outcomes are replicated by the model.
+    -   **Interpretation:** R² values range from 0 to 1, where higher values indicate better model fit. An R² of 1 suggests the model perfectly predicts the target variable.
+    -   **Something to consider:** R² offers an insight into the goodness of fit of the model. However, it does not indicate if the model is the appropriate one for your data, nor does it reflect on the accuracy of the predictions.
+
+```{r}
+# Calculate and extract reg model's RMSE for recipe 1
+rmse_reg1 <- recipe1_predictions_reg |> 
+  metrics(truth = sale_price, estimate = pred) |> 
+  filter(.metric == "rmse")
+
+# Calculate and extract reg model's MAE for recipe 1
+mae_reg1 <- recipe1_predictions_reg |> 
+  metrics(truth = sale_price, estimate = pred) |>
+  filter(.metric == "mae")
+
+# Calculate and extract reg model's R-Squared for recipe 1
+rsq_reg1 <- recipe1_predictions_reg |> 
+  metrics(truth = sale_price, estimate = pred) |>
+  filter(.metric == "rsq")
+
+model_reg1 <- bind_rows(rmse_reg1,mae_reg1, rsq_reg1) |> 
+  mutate(model= "model1_reg") # Bringing them all together. Remember: rmse the smaller the better; mae the smaller the better; rsq the bigger the better
+model_reg1
+
+# Calculate and extract reg model's RMSE for recipe 2
+rmse_reg2 <- recipe2_predictions_reg |> 
+  metrics(truth = sale_price, estimate = pred) |> 
+  filter(.metric == "rmse")
+
+# Calculate and extract reg model's MAE for recipe 2
+mae_reg2 <- recipe2_predictions_reg |> 
+  metrics(truth = sale_price, estimate = pred) |>
+  filter(.metric == "mae")
+
+# Calculate and extract reg model's R-squared for recipe 2
+rsq_reg2 <- recipe2_predictions_reg |> 
+  metrics(truth = sale_price, estimate = pred) |>
+  filter(.metric == "rsq")
+
+model_reg2 <- bind_rows(rmse_reg2,mae_reg2, rsq_reg2) |> 
+  mutate(model= "model2_reg") # Bringing them all together. Remember: rmse the smaller the better; mae the smaller the better; rsq the bigger the better
+model_reg2
+
+# Calculate and extract lasso model's RMSE for recipe 1
+rmse_lasso1 <- recipe1_predictions_lasso |> 
+  metrics(truth = sale_price, estimate = pred) |> 
+  filter(.metric == "rmse")
+
+# Calculate and extract lasso model's MAE for recipe 1
+mae_lasso1 <- recipe1_predictions_lasso |> 
+  metrics(truth = sale_price, estimate = pred) |>
+  filter(.metric == "mae")
+
+# Calculate and extract lasso model's R-Squared for recipe 1
+rsq_lasso1 <- recipe1_predictions_lasso |> 
+  metrics(truth = sale_price, estimate = pred) |>
+  filter(.metric == "rsq")
+
+model_lasso1 <- bind_rows(rmse_lasso1,mae_lasso1, rsq_lasso1) |> 
+  mutate(model= "model1_lasso") # Bringing them all together.  Remember: rmse the smaller the better; mae the smaller the better; rsq the bigger the better
+
+
+# Calculate and extract lasso model's RMSE for recipe 2
+rmse_lasso2 <- recipe2_predictions_lasso |> 
+  metrics(truth = sale_price, estimate = pred) |> 
+  filter(.metric == "rmse")
+
+# Calculate and extract lasso model's MAE for recipe 2
+mae_lasso2 <- recipe2_predictions_lasso |> 
+  metrics(truth = sale_price, estimate = pred) |>
+  filter(.metric == "mae")
+
+# Calculate and extract lasso model's R-squared for recipe 2
+rsq_lasso2 <- recipe2_predictions_lasso |> 
+  metrics(truth = sale_price, estimate = pred) |>
+  filter(.metric == "rsq")
+
+model_lasso2 <- bind_rows(rmse_lasso2,mae_lasso2, rsq_lasso2) |> 
+  mutate(model= "model2_lasso2") # Bringing them all together.  Remember: rmse the smaller the better; mae the smaller the better; rsq the bigger the better
+
+all_models_metrics <- bind_rows(model_reg1, model_reg2, model_lasso1,model_lasso2) #bringing all model together
+
+all_models_metrics |> arrange(.metric, .estimate)#sort them to identify the best models --> rmse the smaller the better; mae the smaller the better; rsq the bigger the better. 
+```
+
+#### Identify the best model using models' metrics
+
+Decide which model to proceed with should be based on these metrics, considering RMSE [lower values better], MAE [lower values better] and R² [higher values better]. Sometimes the best model is the one that gives the best compromise among those metrics. They are not always in agreement. Moreover, keep in mind that the choice of model might also depend on other factors such as:
+
+-   Interpretability and complexity of the model.
+
+-   Computational resources and time available.
+
+-   The specific requirements of your application or project.
+
+The linear regression models with recipe 2 seems to be the best model when it comes to this metrics. It has the lowest MAE, lowest RMSE and second to highest R-Squared. However, that model was also troublesome (remember the warning) and it would be very hard to interpret. The lasso model with recipe 2 will have the same interpretability problem and it has a higher MAE than the linear regression with recipe1. The linear regression with recipe1 model will be easy to interpret (only two independent variables) but it explain "only" 55.5% (lowest value) of the variance of sale_price. Lasso model with recipe1 is the worst in MAE and RMSE and the R-Squared is the third worst. In conclusion, it seems that none of the above model is optimal for our needs. However, we have some indications of the direction for our next model (not 2 predictors but not all predictors) and we will use the activity to see if we can improve also by using ridge regression.
+
+##### **Activity 3: Comparing and evaluating models new models. Write the code to complete the tasks below [write code just below each instruction; for help or queries, use Teams RStudio - Forum channel] - 30 minutes**
+
+```{r}
+# Task a: Build a new recipe that use only numeric variables with strong positive correlation with sales price. Leverage the two correlation charts created above to identify them. Make sure all the independent variables are standardize. Include also Overall_Cond and Neighborhood as dummy variables. Names this recipe as example_recipe3.
+
+# Task b: Define a new ridge regression model using parsnip. Name the model as linear_mod_ridge. Make sure to use the right arguments to perform ridge regression.
+
+
+# Task c: Create 5 new workflows: 1) linear regression model with recipe 3 (recipe3_workflow_reg); 2) lasso regression model with recipe 3 (recipe3_workflow_lasso); 3) ridge regression model with recipe 1 (recipe1_workflow_ridge); 4) ridge regression model with recipe 2 (recipe2_workflow_ridge); 5) ridge regression model with recipe 3 (recipe3_workflow_ridge).
+
+# Task d: Make predictions using the 5 new workflows. Call the prediction as recipe3_predictions_reg, recipe3_predictions_lasso, recipe1_predictions_ridge, recipe2_predictions_ridge, recipe3_predictions_ridge.
+
+# Task e: Calculate for each one of the above RMSE, MAE and  R-squared. Use similar naming convention used in the example above. Make sure to put the metrics in a new tibble. Make sure the tibble also contains the previous models results. Compare the results with the old ones. Which one is the best model in making predictions?  
+
+```

@@ -1,0 +1,421 @@
+---
+title: "Week 2 materials"
+author: "Biagio Palese"
+date: "`r format(Sys.time(), '%d %B, %Y')`" 
+output: 
+  html_document:
+    
+    theme: flatly
+    toc: TRUE
+    toc_float: TRUE
+    code_download: TRUE
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE, cache = F}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  error = TRUE,
+  warning= FALSE,
+  message= FALSE)
+```
+
+## Basic Manipulations
+
+The following sections of our book R for Data Science( [first portion of the course book](https://r4ds.hadley.nz) ) are included in the second week:
+
+-   [Data Transformation](https://r4ds.hadley.nz/data-transform): Sections: from 3 to 3.3 & part of 3.5 included
+
+### Link to other resources
+
+-   Internal help: [posit support](https://support.posit.co/hc/en-us)
+
+-   External help: [stackoverflow](https://stackoverflow.com/search?q=rstudio&s=25d8522e-3191-4bf2-ae3b-ccad762aeca9)
+
+-   Additional materials: [posit resources](https://posit.co/resources/)
+
+-   Cheat Sheets: [posit cheat sheets](https://posit.co/resources/cheatsheets/)
+
+While I use the book as a reference the materials provided to you are custom made and include more activities and resources. If you understand the materials covered in this document there is no need to refer to other sources. If you have any troubles with the materials don't hesitate to contact me or check the above sources.
+
+## Review
+
+### Running code in RStudio
+
+If you are running code interactively in the console you just need to enter commands after the prompt sign "\>". If you are running the code from this window (Script Editor) you can press Cmd(Mac)/Ctrl(Windows) + Enter to run a single line of code or highlight multiple line and then press Cmd/Ctrl + Enter.
+
+### Packages installation
+
+```{r}
+# install.packages("tidyverse")# Remember there is no need to run this code again since we already installed those packages last class. By putting a # sign in front of the code, you are transform code into a comment.
+# install.packages(c("nycflights13")# cmd/ctrl + shift + C to comment/uncomment multiple lines after selecting them
+```
+
+### Load packages
+
+```{r}
+library(tidyverse)
+#Take careful note of the conflicts message that’s printed when you load the tidyverse. It tells you that dplyr overwrites some functions in base R. If you want to use the base version of these functions after loading dplyr, you’ll need to use their full names: stats::filter() and stats::lag().
+library(nycflights13)
+```
+
+### Running R
+
+```{r}
+1+2 #it can be run in the console too
+```
+
+### Need help
+
+```{r}
+#look into the R community or Stackoverflow
+#use help ribbon
+?install.packages# help on a specific function
+example("seq")# example on how to use the function
+<- }#moreover if something is wrong with your code Rstudio will signal it to you.
+
+```
+
+### Workflow basic script
+
+```{r}
+#run basic calculations
+1 / 200 * 30
+(59 + 73 + 2) / 3
+sum(500 / 2, 200)
+
+```
+
+####Assignement
+
+```{r}
+class_size <- 50
+# "<-" # is the assign operator and it means you are assigning value to an object/variable. The shortcut option/alt + - will create the assign symbol
+```
+
+#### Object names
+
+Object names must start with a letter, and can only contain letters, numbers, \_ and .. You want your object names to be descriptive, so you’ll need a convention for multiple words.
+
+```{r}
+welcome_to_rstudio #always use meaningful names but if they are long separate them with a _.
+this_is_a_really_long_name_completely_unnecessary <- 2.5 # instead of writing the entire name learn that the tab key allows you to autocomplete
+this #try the autocompletion feature; we will cover other trick about the tab key later
+
+r_rocks <- 2 ^ 3
+#what happen if I run the following lines; why?
+r_rock
+R_rocks
+
+
+```
+
+#### Using functions
+
+```{r}
+se# we want to call the sequence function seq but press tab and navigate all the functions that start with se
+se# Press TAB once more when you’ve selected the function you want. RStudio will add matching opening (() and closing ()) parentheses for you.
+y <- seq(1, 10, length.out = 5 #if a function is incomplete R will not think that you are done. Run it and see what happens. Press Esc if you want to discard the operation
+#keep in mind that unless your script generate an error the diagnostics (red croos next to the line of code) are there to help you but you can ignore them without any harm, in case the issue is only cosmetic.
+
+paste("Welcome" ,"to week", "2")
+```
+
+**End of review**
+
+### Data Manipulations
+
+![Data Science model: Artwork by @allison_horst](environmental-data-science-r4ds-general.png)
+
+### Get to know your data
+
+```{r}
+flights#dataset we will use --> make sure you run library(nycflights13) before running this line of code
+?flights # get a description of it
+view(flights)# run this if you want to explore the entire dataset --> which will open the dataset in the RStudio viewer.
+glimpse(flights)#to get a summary of the data
+colnames(flights)# know the columns name of your dataset
+
+```
+
+### Data types
+
+Only the most used ones are covered below:
+
+-   *int* stands for integers (1,2,3).
+
+-   *dbl* stands for doubles, or real numbers (-1, 1.5,4/5).
+
+-   *chr* stands for character vectors, or strings ("this is a string").
+
+-   *fctr* stands for factors, which R uses to represent categorical variables with fixed possible values (freshman, sophomore, junior, senior).
+
+-   *lgl* stands for logical, vectors that contain only TRUE or FALSE (True, False, True).
+
+-   *date* stands for dates (01/18/2021).
+
+-   *dttm* stands for date-times, a date + a time (01/18/2021 11:00 am).
+
+### Data structures
+
+Only the most used ones are covered below:
+
+-   *Vector*: An atomic vector (or simply vector) is the simplest data structure in R which consists of an ordered set of values of the same type (e.g. numeric, character, date, etc…).
+
+#### Examples:
+
+```{r}
+departments <- c("OMIS", "Finance", "Accounting" , "Management","Marketing")# a vector can be created using the combine function c()
+departments
+students_number <- c(220, 180, 255, 100, 170)#all the elements of a vector must have the same data type. This is why the data type determines the type of vector you have (e.g., numeric, characters, date vectors).
+students_number
+students_avg_age <- c(21.5, 22.1, 21.8, 21.3, 21.5)
+students_avg_age
+
+```
+
+-   *Dataframe/tibble/dataset*: A dataframe is a data structure that organizes data into a 2-dimensional table of rows and columns, much like a spreadsheet. Dataframes are called tibbles in R (tidyverse).
+
+We can create a tibble by combining two or more vectors of the same length.
+
+#### Example:
+
+```{r}
+cob <- tibble(departments,students_number,students_avg_age)# each vector was of 5 elements (or length 5) --> this is why the cob dataframe has 5 rows. We are using three vectors in our cob dataframe --> this is why we have 3 columns or variables. As you can see the vector name has become the column name and a tibble is not much different than an Excel spreadsheet
+```
+
+*NOTE*: there are other data structures available in R (e.g., matrices, lists etc.) but we will not use or cover them in this course.
+
+Now that you have a basic understanding of data types and structures (we will cover more about tibble next week) we can dive into useful functions for wrangling your data.
+
+### 5 + 1 Key data manipulation (dplyr package) functions:
+
+-   Pick observations based on their values (*filter()*).
+
+-   Reorder the rows/columns (*arrange()*).
+
+-   Pick variables based their column names (*select()*).
+
+-   Create new variables or update existing variables (*mutate()*).
+
+-   Collapse many values down to a single summary (*summarise()*).
+
+-   All the above functions can be used in conjunction with the function *group_by()* (our +1 function). group_by changes the scope of each function from operating on the entire dataset to operating on it group-by-group.
+
+#### How they work?
+
+These six functions provide the verbs for a language of data manipulation. All verbs work similarly, and this is a great news, and have a similar structure:
+
+The first argument is a dataframe on which you want to perform a manipulation.
+
+The subsequent arguments describe what do you want to do with the original dataframe, using the variable names (without quotes).
+
+The result is a new dataframe (remember to assign it to a new object if you want to preserve the changes). Together these properties make it easy to chain together multiple simple steps to achieve a complex result.
+
+## Filter()
+
+**filter()** is used to include in your dataset only observations that meet one or more logical conditions. For example, you will use filter if from an imaginary US tax payers dataset (tax_payers), you want to continue your analysis only on tax payers that live in Illinois given a states variable (notice that by doing so \# of observations/rows decreases while \# of variables/columns stays the same). --\> **filter(tax_payers, state== "IL")**
+
+```{r}
+#Example: flights that traveled on January (Note the # of observation included in the dataset)
+filter(flights, month == 1)#the results do not replace the original dataset. To save it to future analysis assign it to a new variable named jan_flights. Create the variable jan_flights 
+jan_flights<- filter(flights, month == 1)
+view(filter(flights, dest == "ORD"))
+# print jan_flights
+#Example 2: flights that traveled to Ohare (ORD)
+
+```
+
+To use filtering effectively, you have to know how to select the observations that you want using the comparison operators. R provides the standard suite: \>, \>=, \<, \<=, != (not equal), and == (equal).
+
+When you’re starting out with R, the easiest mistake to make is to use = instead of == when testing for equality. When this happens you’ll get an informative error:
+
+```{r}
+filter(flights, month == 1)
+```
+
+Multiple arguments to filter() are combined with “and”: every expression must be true in order for a row to be included in the output. For other types of combinations, you’ll need to use Boolean operators yourself: & is “and”, \| is “or”, and ! is “not”. The "," can also be used instead of &. However, I do recommend to use & especially at the beginning as it is easier for you to remind that both conditions must be met for an observation to be included in the analysis. However, if you combine an "&" and "\|" in the same filter you need parenthesis to separate the "&" and the "\|" (see below note).
+
+```{r}
+#Example 3: find flights in November and December
+filter(flights, month==11 | month == 12)# look at the results. Does it make sense to have such filter?
+
+#Example 4: find flights in November or December
+view(filter(flights, month == 11 | month == 12))# Now this makes sense as you want to constraint the focus of your analysis to the last two months of the year. You might have an intuition that during the holiday season there is need for more flights/personnel 
+
+# Example 5: find flights that weren’t delayed (on arrival or departure) by more than two hours 
+filter(flights, dep_delay <= 120 | arr_delay <= 120)# Hours are presented in minutes in the dataset that's why 120. Again, you need to get to know your data before starting manipulations. If you don't remember column names check the colnames function (?colnames).
+
+```
+
+#### Activity 1: Filter (1 & 4 in class; 2 & 3 are for practice) [write code just below each instruction, then paste the code in this week activity form:<https://forms.office.com/r/i29igRVEpz>; finally use Teams RStudio - Forum channel for help on the activities/homework or if you have other questions] - 5 minutes
+
+```{r}
+#flights in january with more than 60 minutes delay
+view(filter(flights, month == 1, dep_delay > 60 | arr_delay > 60))
+#flights with departure or arrival delay smaller than 15 minutes
+
+#flights with distance equal or bigger than 1010 miles
+
+#flights operated by american airlines (AA)
+view(filter(flights, carrier == "AA"))
+```
+
+#### NOTE
+
+```{r}
+#flights in january with more than 60 minutes delay
+filter(flights, month==1 & dep_delay> 60 & arr_delay>60)#this line is equivalent to the one below with ,. In this case & and , are perfect substitutes .
+filter(flights, month==1 , dep_delay> 60 , arr_delay>60)
+ 
+#flights in january with more than 60 minutes delay
+filter(flights, month==1 & dep_delay> 60 |arr_delay>60)# However be careful because this is line is different from the two line below because the | is affecting the equivalency with the ,. So, if in your filter you have both a & and |, the & and the , are not equivalent.
+filter(flights, month==1 , dep_delay> 60 |arr_delay>60)
+filter(flights, month==1 & (dep_delay> 60 |arr_delay>60))# this is equal to the , but you need parenthesis to divide the & and | conditions. Without the parenthesis you will get different & wrong results
+```
+
+## Arrange()
+
+**arrange()** works similarly to filter() except that instead of selecting rows, it changes the order in which they are presented in the dataset. For example, using the above US tax payers dataset, you will use arrange if you want to sort the dataset by the tax payers last name in decreasing order (Z-A). --\> **arrange(tax_payers, desc(last_name))** Arrange takes a dataframe and a set of column names (or more complicated expressions) to order by. If you provide more than one column name, each additional column will be used to break ties in the values of preceding columns:
+
+```{r}
+view(arrange(flights, month, day))
+view(arrange(flights, desc(dep_delay))#desc allows to re-order by a column in descending order
+# Example 1: arrange the dataset based on destination increasing alphabetical order
+arrange(flights, desc(distance))
+#Example 2: arrange the dataset based on distance decreasing order
+
+```
+
+#### Activity 2: Arrange (1 & 4 in class; 2 & 3 are for practice) [write code just below each instruction, then paste the code in this week activity form:<https://forms.office.com/r/i29igRVEpz>; finally use Teams RStudio - Forum channel for help on the activities/homework or if you have other questions] - 5 minutes
+
+```{r}
+#flights by distance from smaller to bigger
+view(arrange(flights, distance))
+#flights by distance from bigger to smaller
+
+#flights by air time
+
+#flights by arr_delay from bigger to smaller
+arrange(flights, desc(arr_delay))
+```
+
+## Select()
+
+**select()** allows you to continue the analysis only on some specific columns of your original dataset. By using select you can rapidly zoom in on a useful subset of variables that you think needs deeper investigation or that are part of the scope of your analysis. For example, using the same imaginary US tax payer dataset, you want to focus your analysis on just salary, gender and age. It is unnecessary to keep all the other columns as you already know that they are not going to be included in the scope of the analysis --\> **select(tax_payers, salary, gender, age)**
+
+```{r}
+select(flights, year, month, day)#Select columns by name
+select(flights, year:day)#Select all columns between year and day (inclusive)
+select(flights, 1:3)#Select columns based on their position in the dataset (inclusive)
+select(flights, -(year:day))# Select all columns except those from year to day (inclusive)
+
+# Example 1: select the 2nd, 4th and 10th columns 
+
+#Example 2: select all the columns but the last 3
+
+```
+
+As you can see there are multiple ways to select the same columns (first 3 lines of code give the same outcome: year, month , day subset), but not all of them have the same efficiency. Imagine selecting the first 15 column using the first line of code (you will have to manually type 15 columns name) compared to using the second line (first column : fifteenth column) or the thirs (1:15). However, when you use the last two methods I recommend to check the column order using the function *colnames()*
+
+Moreover, there are a number of helper functions you can use within select():
+
+*starts_with("abc")*: matches names that begin with “abc”.
+
+*ends_with("xyz")*: matches names that end with “xyz”.
+
+*contains("ijk")*: matches names that contain “ijk”.
+
+See ?select for more details.
+
+#### Activity 3: Select (1 & 4 in class; 2 & 3 are for practice) [write code just below each instruction, then paste the code in this week activity form:<https://forms.office.com/r/i29igRVEpz>; finally use Teams RStudio - Forum channel for help on the activities/homework or if you have other questions] - 5 minutes
+
+```{r}
+#first 10 adjacent columns
+
+#columns that contain the word "time"
+
+#all columns but those that contain the word "time"
+
+#columns that start with the letter "d"
+
+```
+
+## Mutate()
+
+**mutate()** enables you to change the columns available in your original dataset. By using mutate() you can add new columns that are functions of existing columns. For example, in the tax_payers dataset, you note that the salary column is reported in euros rather than dollars. In this case, you want to create a new column that reports salary in euros. To do so you need to multiple the value that are in the original salary by the conversion rate between euros and dollars. --\> **mutate(tax_payers, salary_USD = salary \* 1.21)**. Note how I chose a meaningful name for the new column, and that the conversion rate at the time I created this rmd file was 1.21.
+
+Moreover, keep in mind that mutate() always adds new columns at the end of your dataset. So, to view the new column you can use **View(tax_payers)** or **select(tax_payers, salary_USD)**. Nonetheless, If you want to just use the new compute column you can also use the **transmute()** function (see example below).
+
+```{r}
+flights_sml <- select(flights, 
+  year:day, 
+  ends_with("delay"), 
+  distance, 
+  air_time
+)# what is the purpose of running this?
+
+# Example 1: using the flights_sml dataset compute a column named gain equal to the difference between departure delay and arrival delay
+mutate(
+# Example 2: using the flights_sml dataset compute a column named gain equal to the difference between departure delay and arrival delay; a column named hours equal to air time dived by 60; and a column named gain_per_hour equal to gain divided by hours.
+mutate(# you can refer to column your are just creating, be careful to the order. Can you invert the order of gain_per_hour and gain. Let's try!
+
+# Example 3: using the flights_sml dataset  compute a column named speed equal to the variable distance divided by air time multiplied by 60 (we want speed in mph). Use transmute instead of mutate. What is the difference?
+transmute(#If you only want to keep the new variables, use transmute()
+```
+
+#### Activity 4: Mutate (1 & 4 in class; 2 & 3 are for practice) [write code just below each instruction, then paste the code in this week activity form:<https://forms.office.com/r/i29igRVEpz>; finally use Teams RStudio - Forum channel for help on the activities/homework or if you have other questions] - 5 minutes
+
+```{r}
+#compute a variable that shows the difference between scheduled departure time and the actual time of departure
+
+#compute a variable that shows the air time divided by the total flight distance
+
+#compute a variable that shows the difference between scheduled arrival time and the actual time of arrival
+
+##compute a variable that shows the sum of the departure delay and the air time
+```
+
+## Summarise()
+
+**summarise()** enables you to compute descriptive statistics of your dataset. summarise() collapses a dataframe to a single row. For example, if you want to compute the average salary of the observation of the tax payers in your dataset, summarise will return to you one row that contains the average value. --\> **summarise(tax_payers, avg_salary = mean(salary))**. Note how I chose a meaningful name for the output of my summary.
+
+```{r}
+summarise(flights, avg_delay = mean(dep_delay, na.rm = TRUE))# we will talk later about NAs (missing values) but the na.rm=TRUE argument is critical if the column you are using for your average contains missing values. Let's remove that argument amd see what happens.
+# Example 1: compute the mean of the arrival delay column
+
+# Example 2: find the max distance
+```
+
+summarise() is not terribly useful unless we pair it with **group_by()** or better it is pretty limited to summarise a single value per column. For example, imagine that you want to see how the average salary of tax payers change depending on their age. In this case, you need to first group_by your dataset using the age column and then compute the average salary. Thanks to the combination of group_by and summarise you will able to explore if the average salary of a 40 years old tax payer is on average higher/lower or equal to the ones of a 21 years old tax payer.
+
+## Summarise + group_by()
+
+So, when you use the group_by() function you can change the unit of analysis from the complete dataset to individual groups (columns that caught your attention). group_by will create a group for each unique value available in the selected column.Then, when you use the dplyr verbs on a grouped dataframe they’ll be automatically applied “by group”. For example, if we applied exactly the same code to a dataframe grouped by date, we get the average delay per date:
+
+```{r}
+by_day <- group_by(flights, year, month, day)
+summarise(by_day, avg_delay_date = mean(dep_delay, na.rm = TRUE))#help in answer the question about how dates are affecting the delay
+
+#Example 1: do the same analysis for each airlines. Call the column avg_dalay_carrier.
+by_carrier
+summarise(#help in answer the question about how the airlines are affecting the delay
+```
+
+Together group_by() and summarise() provide one of the tools that you’ll use most commonly when working with dplyr: grouped summaries. These two functions are extremely useful to create descriptives statistics of the column of your dataset.
+
+#### Activity 5: Summarise (1 & 4 in class; 2 & 3 are for practice) [write code just below each instruction, then paste the code in this week activity form:<https://forms.office.com/r/i29igRVEpz>; finally use Teams RStudio - Forum channel for help on the activities/homework or if you have other questions] - 5 minutes
+
+```{r}
+#compute the max dep_delay
+
+#compute the min air_time
+
+#compute mean and standard deviation of the distance per each destination
+
+#compute the max and min of air_time per each month
+
+```
+
+*NOTE*: We will cover the remaining sections of chapter 3 in the next class make sure that your are not behind and you understand what we covered so far.

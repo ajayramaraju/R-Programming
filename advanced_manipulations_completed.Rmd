@@ -1,0 +1,426 @@
+---
+title: "Week 3 materials"
+author: "Biagio Palese"
+date: "`r format(Sys.time(), '%d %B, %Y')`" 
+output: 
+  html_document: 
+    theme: flatly
+    toc: TRUE
+    toc_float: TRUE
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE, cache = F}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  error = TRUE,
+  warning= FALSE,
+  message= FALSE)
+```
+
+## Advanced Manipulations: 
+
+The following sections of our book R for Data Science( [first portion of the course book](https://r4ds.hadley.nz) ) are included in the first week:
+
+- [Data Import](https://r4ds.hadley.nz/data-import)
+
+- [Data transformation with pipes](https://r4ds.hadley.nz/data-transform)
+
+
+### Link to other resources
+
+- Internal help: 
+ [posit support](https://support.posit.co/hc/en-us) 
+
+- External help: [stackoverflow](https://stackoverflow.com/search?q=rstudio&s=25d8522e-3191-4bf2-ae3b-ccad762aeca9)
+
+- Additional materials: [posit resources](https://posit.co/resources/)
+
+- Cheat Sheets: [posit cheat sheets](https://posit.co/resources/cheatsheets/)
+
+While I use the book as a reference the materials provided to you are custom made and include more activities and resources. If you understand the materials covered in this document there is no need to refer to other sources. If you have any troubles with the materials don't hesitate to contact me or check the above sources.
+
+### Packages installation
+```{r, eval=FALSE}
+# install.packages("tidyverse")# no need to install them again if you have done so in the first week
+# install.packages("nycflights13")#for this reason the two lines are commented out
+```
+
+### Load packages
+```{r}
+library(tidyverse)# this is required any time you start a new RStudio session
+library(nycflights13)
+```
+
+![Data Science model: Artwork by @allison_horst ](environmental-data-science-r4ds-general.png)
+Up to this point we have used data available in R packages. We have learned how to explore them. Here is a few other ways:
+
+```{r}
+#Running this code is the equivalent of simply running the name of the dataset you want to print. Meaning default printing will be applied
+flights# but what if I want to print in console all columns?
+?flights#get info about the dataset
+colnames(flights)#get the columns in the dataset
+glimpse(flights)#useful way to collapse the content in a summary format
+view(flights)# the other option to print more rows and actually all rows is still the view () function discussed in week 1 to open the dataset in a new window
+
+```
+
+
+## Pipes 
+
+Pipes are probably the biggest reason why you should use tidyverse for manipulations.
+Before we learn how to use them please keep in mind that are two types of pipes:
+
+- The magrittr pipe %>% that comes from the magrittr package created by Stefan Milton Bache. Packages in the tidyverse load %>% for you automatically, so you don’t usually load magrittr explicitly. While magrittr pipe was used for a while in the tidyverse world, it is now losing its traction. 
+-  In fact, the native pipe |> is becoming more popular and it is most commonly used. 
+
+For this course we will use only the native pipe |>. While for simple cases, |> and %>% behave identically only the native pipe is part of base R, and so it’s always available for you to use, even when you’re not loading the tidyverse. Moreover, |> is simpler than %>% and it works better with more advanced tasks.
+
+However, you might need to make one change to your RStudio options to use |> instead of %>% by accessing the Code Editing tab of your Project Option; After you made this change you can add the native pipe to your code by using the built-in keyboard shortcut Ctrl/Cmd + Shift + M. 
+
+### Combining multiple operations with the pipe 
+
+Imagine that we want to explore the relationship between the distance and average delay for each destination. There are three steps to prepare our original flights data:
+
+- Group flights by destination.
+
+- Summarise to compute average distance, average delay, and number of flights.
+
+- Filter to remove noisy points (less than 20 observations, small sample) and Honolulu airport (almost twice as far away as the next closest airport).
+
+If we put in practice what we learned so far, this code is a little frustrating to write because we have to give each intermediate data frame a name, even though we don’t care about it. Naming things is hard, so this slows down our analysis.
+```{r}
+by_dest <- group_by(flights, dest)
+delay <- summarise(by_dest,
+  count = n(),
+  avg_dist = mean(distance, na.rm = TRUE),
+  avg_delay = mean(arr_delay, na.rm = TRUE)
+)#know how many flights go to each destination [n()]; average distance and average delay for flights at each destination
+delay_filtered <- filter(delay, count > 20, dest != "HNL")#now let's remove all destinations that have less or equal to 20 flights and let's exclude Honululu from it. Notice how many assignment I need to create the desired object (3)
+
+```
+There’s another, much simpler and efficient, way to tackle the same problem thanks to the pipe operator, |>, because we can combine manipulations together:
+```{r}
+filtered_delay <- flights |> 
+  group_by(dest) |> 
+  summarise(
+    count = n(),
+    avg_dist = mean(distance, na.rm = TRUE),
+    avg_delay = mean(arr_delay, na.rm = TRUE)
+  ) |> 
+  filter(count > 20, dest != "HNL") #Notice how many assignment I need to create the desired object (1), two less than the previous code.
+
+```
+
+What is great about using pipe is that your code now focuses on the transformations, and not anymore on what’s being transformed, which makes the code easier to read. 
+In fact, the best way to read the above code is to take each line before the pipe as an imperative statement (remember that the dataset us always the starting point). 
+- Take the flights dataset, then
+- Group it by destination, then
+- summarise it (I want the number of flights at each destination, the average distance and the average delay of each destination), then
+- Filter the results and include only those destinations with more than 20 flights and exclude Honululu. 
+
+As suggested by this reading, a good way to pronounce |> when reading code is “then”. So, remember that you can use the pipe to rewrite multiple operations in a way that you can read left-to-right, top-to-bottom. We’ll use piping from now on because it considerably improves the readability of code and it makes your code more efficient.
+Working with the pipe is one of the key criteria for belonging to the tidyverse world!
+
+By the way we can use the pipe also to what we have already learned ;-)
+
+#### Activity 1 write the code to solve the below tasks. You MUST use the pipe to complete the activity [write code just below each instruction, then paste the code in this week activity form: https://forms.office.com/r/wTw7ccVi12; finally use Teams RStudio - Forum channel for help on the activities/homeworks or if you have other questions] - 7 minutes:
+```{r}
+#show the entire flights dataset in a new window
+
+# keep only the flights in February with more than 75 minutes delay
+
+# sort the flights by air_time from bigger to smaller
+
+# keep all columns but those that contain the word "dep"
+
+# create a column named gain equal to the difference between departure delay and arrival delay
+
+#calculate the median of the distance variable
+
+
+```
+
+
+### Why producing counts matters?
+It is also extremely important that you keep in mind that whenever you do any aggregation, it’s always a good idea to include either a count (n()), or a count of non-missing values (sum(!is.na(x))). That way you can check that you’re not drawing conclusions based on very small amounts of data. Results and conclusions based on few observations contain noise and are drawn based on a small number of events and can lead to incorrect insights. 
+
+*Imaginary Scenario*:
+Let's talk about flight delays and why we can't always compare them from different times like before, during, and after the pandemic. Things change, and comparisons might not be fair.
+
+Imagine a new direct flight from DeKalb to Potenza. On its first trip, something rare happens: a passenger gets sick, and because of a new rule, the flight is delayed for 14 hours while they wait for a health check.
+
+If we only look at this one flight, we might think the average delay for this route is 14 hours. But that's not true, it's just one unusual case. We can't say all flights on this route are always delayed like this based on one incident. We need more flights to make a fair judgment. If after many flights the delay is still long, then we might think it's a bad route. But for now, it's too early to decide based on just one flight.
+
+I hope the scenario made the point on the importance of count clear. Now let's use a real data example and let’s look at the planes (identified by their tail number) that have the highest average delays:
+```{r}
+not_cancelled |> 
+  group_by(tailnum) |> 
+  summarise(
+    delay = mean(dep_delay))# no info about how many flights each tailnum has made. Which one seem the most problematic? 
+not_cancelled |> 
+  group_by(tailnum) |> 
+  summarise(
+    delay = mean(dep_delay, na.rm = TRUE), n = n())#now you also now on how many flights your average is based on. You don't want to base any conclusion on a small number of observation. Check the # of flights for the tail number D942DN
+```
+
+### Recap of the summary functions
+
+Just using means and counts can get you a long way, but R provides many other useful summary functions that should be taken in consideration when producing descriptive statistics. Here is a list of the most useful ones with many opportunities to practice them in the activities belpw:
+
+- Measures of location:  mean(x) and median(x) . The mean is the sum divided by the length; the median is a value where 50% of x is above it, and 50% is below it.
+
+- Measures of spread: sd(x). The root mean squared deviation, or standard deviation sd(x), is the standard measure of spread.
+
+- Measures of rank: min(x) and  max(x). The min will help you identify the smallest value, while the max allows you to find the largest value in column.
+
+```{r}
+#measures of location example
+not_cancelled |> 
+  group_by(year, month, day) |> 
+  summarise(
+    avg_delay = mean(dep_delay),
+    median_delay = median(dep_delay)) # the average positive delay
+
+#measures of spread example
+not_cancelled |> 
+  group_by(dest) |> 
+  summarise(distance_sd = sd(distance)) |> 
+  arrange(desc(distance_sd))# Is distance to some destinations more variable than to others?
+
+#measures of rank example
+not_cancelled |> 
+  group_by(year, month, day) |> 
+  summarise(
+    first = min(dep_time),
+    last = max(dep_time)
+  )# When do the first and last flights leave each day?
+```
+
+### Activity 2 (First and third in class, second and forth as practice) You must use the pipe to complete the activity [write code just below each instruction, then paste the code in this week activity form: https://forms.office.com/r/wTw7ccVi12; finally use Teams RStudio - Forum channel for help on the activities/homeworks or if you have other questions] - 5 minutes:
+```{r}
+
+#Compute the mean and median of the dep_delay variable per each dest?
+
+#Compute the mean and median of the air_time variable per each origin?
+
+# Find min and max of the dep_delay variable for each month?
+
+# Find min, max and sd of the arr_delay variable for each destination?
+
+```
+
+## Creating Full Descritive Statistic Tables
+Now that we went over those functions we need to learn how to use them together to create descriptive statistics tables. 
+```{r}
+## Create a descriptive statistic tables that shows min, average, median, max and standard deviation of the arr_delay
+
+## Create a descriptive statistic tables that shows min, average, median, max and standard deviation of the arr_delay per each carrier. Show also the number of flights operated by each airline.
+
+## Create a descriptive statistic tables that shows min, average, median, max and standard deviation of the arr_delay per each month. Show also the number of flights departed in each month 
+
+```
+
+### Activity 3 (First and third in class, second and forth as practice) You must use the pipe to complete the activity  [write code just below each instruction, then paste the code in this week activity form: https://forms.office.com/r/wTw7ccVi12; finally use Teams RStudio - Forum channel for help on the activities/homeworks or if you have other questions] - 5 minutes
+```{r}
+#Compute a full descriptive stats table of the distance variable per each tail number?
+
+#Compute a full descriptive stats table of the dep_delay variable per each carrier?
+
+#Compute a full descriptive stats table of the distance variable per each destination?
+
+#Compute a full descriptive stats table of the dep_delay variable per each origin?
+
+
+
+```
+
+##### Challenge1: You must use the pipe to complete the challenge and not create any intermediate objects (one big chunk of code)  [write code just below each instruction, then paste the code in this week activity form: https://forms.office.com/r/wTw7ccVi12; finally use Teams RStudio - Forum channel for help on the activities/homeworks or if you have other questions]
+```{r}
+#Use the flights dataset and apply the following manipulations at the same time using pipes:
+#1) Make sure your dataset has only the following columns: month, day, dep_delay, arr_delay, dest, distance, carrier and air_time
+#2) Reorder your data and show them from the highest arr_delay flight to the smallest one.
+#3) Create a column named distance_km that is equal to distance/1.6
+#4) Per each carrier compute the avg_arr_delay, min_arr_delay, max_arr_delay, sd_arr_delay, median_arr_delay and the number of flights operated.
+#5) Keep in the output only the 5 carriers with the lowest median_arr_delay 
+
+```
+
+##### Challenge 2: You must use the pipe to complete the challenge and not create any intermediate objects (one big chunk of code) [write code just below each instruction, then paste the code in this week activity form: https://forms.office.com/r/wTw7ccVi12; finally use Teams RStudio - Forum channel for help on the activities/homeworks or if you have other questions]
+```{r}
+#Use the flights dataset and apply the following manipulations at the same time using pipes:
+#1) Keep only flights departed from JFK in February
+#2) Make sure your dataset has only the following columns: day, dep_delay, arr_delay, dest,and carrier 
+#3) Create a column named final_delay that is equal to arr_delay- dep_delay
+#4) Per each dest compute the avg_final_delay, min_final_delay, max_final_delay, sd_final_delay, median_final_delay and the number of flights landed there.
+#5) Reorder your data and show them from the highest median_final_delay to the smallest one.
+
+```
+
+### Missing values
+***Skip in case there is not much time***
+Ok now it is time to provide an explanation on the **na.rm** argument that we used in the summarise function. Let's try one more time in not using it. What happens if we don’t have it?
+```{r}
+flights |> 
+  group_by(year, month, day) |> 
+  summarise(mean = mean(dep_delay))
+```
+We get a lot of missing values! That’s because aggregation functions obey the usual rule of missing values: if there’s any missing value in the input, the output will be a missing value. Fortunately, all aggregation functions have an na.rm argument which removes the missing values prior to computation:
+```{r}
+flights |> 
+  group_by(year, month, day) |> 
+  summarise(mean = mean(dep_delay, na.rm = TRUE))
+```
+In this case, missing values represent cancelled flights. So, we could also tackle the problem by first removing all the cancelled flights. By doing so we get rid of all missing values and so of the need of using the na.rm argument.
+```{r}
+not_cancelled <- flights |> 
+  filter(!is.na(dep_delay), !is.na(arr_delay))#save this dataset so we can reuse it in the future.
+
+not_cancelled |> 
+  group_by(year, month, day) |> 
+  summarise(mean = mean(dep_delay))#no need of na.rm since we don't have NAs anymore
+```
+
+
+## Other useful manipulation functions:
+**Skip the below ones depending on time because you can achieve the same results with select** 
+
+- **Distinct**: (https://r4ds.hadley.nz/data-transform#distinct)
+
+distinct() identifies all the unique rows in a dataset, and excludes duplicates. 
+```{r}
+# Remove duplicate rows, if any
+flights |> 
+  distinct()
+```
+
+Most of the time, however, you’ll want the distinct combination of just a few variables, so you can also optionally supply column names:
+```{r}
+flights |> 
+  distinct(origin, dest)# Find all unique origin and destination pairs
+
+```
+
+In the example above only origin and destination are retained as columns. If you want to the keep other columns when identifying for unique rows, you can use the .keep_all = TRUE option within the distinct() function.
+
+```{r}
+flights |> 
+  distinct(origin, dest, .keep_all = TRUE)
+#It’s not a coincidence that all of these distinct flights are on January 1: distinct() will find the first occurrence of a unique row in the dataset and discard the rest.
+```
+
+
+- **Slice**: (https://r4ds.hadley.nz/data-transform#the-slice_-functions)
+
+There are five handy slice functions that allow you extract specific rows within each group:
+
+- df |> slice_head(n = 1): takes the first row from each group.
+
+- df |> slice_tail(n = 1): takes the last row in each group.
+
+- df |> slice_min(x, n = 1): takes the row with the smallest value of column x.
+
+- df |> slice_max(x, n = 1): takes the row with the largest value of column x.
+
+- df |> slice_sample(n = 1): takes one random row.
+
+You can vary n to select more than one row, or instead of n =, you can use prop = 0.1 to select the percentage observations (e.g. 10% of the rows in each group). 
+
+For example, the following code finds the flights that are most delayed upon arrival at each destination:
+```{r}
+flights |> 
+  group_by(dest) |> 
+  slice_max(arr_delay, n = 1) #Note that there are 105 destinations but we get 108 rows here. What’s up? slice_min() and slice_max() keep tied values so n = 1 means give us all rows with the highest value including ties. 
+```
+
+Now let's check the flights that are least delayed upon arrival at each destination and let's enforce one row per group (excluding ties):
+
+```{r}
+flights |> 
+  group_by(dest) |> 
+  slice_min(arr_delay, n = 1, with_ties = FALSE)#now total is exactly 105, what happems if I remove it?
+```
+
+
+- **Ungroup**: (https://r4ds.hadley.nz/data-transform#ungrouping)
+
+This function is useful when you have a dataset divided into groups (a group_by dataset)
+```{r}
+daily <- flights |>  
+  group_by(year, month, day)
+daily
+
+daily |> 
+  ungroup()# simply remove the groups from the grouped dataset
+
+# now let's see what happens when used in combination of summarise
+daily |> 
+  summarise(n = n())# summarise on a grouped dataset
+
+
+daily |> 
+  ungroup() |>
+  summarise(n = n())# remove the groups before completing the summarise, what happened?
+
+daily |> 
+  summarise(n = n())|> 
+  ungroup()# remove the groups after completing the summarise, what happened?
+```
+
+
+- **Rename**: (https://r4ds.hadley.nz/data-transform#rename)
+
+If you want to keep all the existing variables and just want to rename a few of them, you can also use rename() instead of select():
+```{r}
+flights |> 
+  rename(tail_num = tailnum)
+```
+
+If you have a bunch of inconsistently named columns and it would be painful to fix all their name  by hand, check out the *janitor::clean_names()* function which provides some useful automated cleaning.
+
+- **Relocate**: (https://r4ds.hadley.nz/data-transform#relocate)
+
+Use relocate() to move variables around. You might want to collect related variables together or move important variables to the front (by default relocate() moves variables to the front):
+```{r}
+flights |> 
+  relocate(time_hour, air_time)
+```
+
+
+### When not to use the pipe
+
+The pipe operator is a powerful tool, but it’s not the only tool at your disposal, and it doesn’t solve every problem! Pipes are most useful for rewriting a fairly short linear sequence of operations. I think you should reach for another tool when:
+
+- Your pipes are longer than (say) ten steps. In that case, create intermediate objects with meaningful names. That will make debugging easier, because you can more easily check the intermediate results, and it makes it easier to understand your code, because the variable names can help communicate intent.
+
+- You have multiple inputs or outputs. If there isn’t one primary object being transformed, but two or more objects being combined together, don’t use the pipe.
+
+## Importing data
+But what happen when your data come from outside of R? It is time to learn how to import external data. To load flat files in R we will use the readr package, which is part of the core tidyverse package.
+Most of readr’s functions are concerned with turning flat files into dataframes (e.g, csv files but similar functions exist also for Excel files or other delimited files).
+These functions all have similar syntax: once you’ve mastered one, you can use the others with ease. In this course we’ll focus on read_csv(). Not only are csv files one of the most common forms of data storage, but once you understand read_csv(), you can easily apply your knowledge to all the other functions in readr.
+
+The first argument to read_csv() is the most important: it’s the path to the file to read. Once again if your file is in your project folder, you will not have any troubles to access it:
+```{r}
+heights <- read_csv("heights.csv")#When you run read_csv() it prints out a column specification that gives the name and type of each column. #the heights.csv is available for download on Blackboard in the week 3 module. If this code doesn't work, make sure to move the file in your project folder.
+```
+
+#### NOTE
+read_csv() uses the first line of the data for the column names, which is a very common convention. The data might not have column names. You can use col_names = FALSE to tell read_csv() not to treat the first row as headings, and instead label them sequentially from X1 to Xn.
+The function will guess the data type of each column by looking at the first 1000 rows. It is your responsibility to make sure that the columns type are correct.
+To get other types of data into R, I recommend starting with the tidyverse packages listed below:
+
+- haven package: reads SPSS, Stata, and SAS files.
+
+- readxl package: reads excel files (both .xls and .xlsx).
+
+- DBI package: along with a database specific backend (e.g. RMySQL, RSQLite, RPostgreSQL etc) allows you to run SQL queries against a database and return a data frame.
+
+## Writing data
+Now that we have seen how to bring data into RStudio, what about exporting data from RStudio? The readr package comes also with two useful functions for writing data back to disk: write_csv() and write_tsv(). 
+If you want to export a csv file to Excel, use write_excel_csv(). The most important arguments are x (the data frame to save), and path (the location to save it).
+```{r}
+write_csv(flights, "flights.csv")#I am exporting the flights dataset and writing it into a csv file called flights.csv. After running the code that file will be available in your working directory (which should be your project folder)
+```
+

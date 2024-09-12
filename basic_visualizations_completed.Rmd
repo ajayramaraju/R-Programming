@@ -1,0 +1,391 @@
+---
+title: "Week 6 materials"
+author: "Biagio Palese"
+date: "`r format(Sys.time(), '%d %B, %Y')`" 
+output: 
+  html_document:
+    theme: flatly
+    toc: TRUE
+    toc_float: TRUE
+    code_download: TRUE
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE, cache = F}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  error = TRUE,
+  warning= FALSE,
+  message= FALSE)
+```
+
+## Basic Visualizations
+
+The following sections of our book R for Data Science( [first portion of the course book](https://r4ds.hadley.nz) ) are included in the second week:
+
+- [Data Visualization](https://r4ds.hadley.nz/data-visualize)
+
+
+### Link to other resources
+
+- Internal help: 
+ [posit support](https://support.posit.co/hc/en-us) 
+
+- External help: [stackoverflow](https://stackoverflow.com/search?q=rstudio&s=25d8522e-3191-4bf2-ae3b-ccad762aeca9)
+
+- Additional materials: [posit resources](https://posit.co/resources/)
+
+- Cheat Sheets: [posit cheat sheets](https://posit.co/resources/cheatsheets/)
+
+While I use the book as a reference the materials provided to you are custom made and include more activities and resources. If you understand the materials covered in this document there is no need to refer to other sources. If you have any troubles with the materials don't hesitate to contact me or check the above sources.
+
+
+## Data visualization
+After diving into manipulations, it is time to move on to visualizations. We will focus on the ggplot2 package, one of the core members of the tidyverse. In this class, I will use the terms chart, plot and graph interchangeably. 
+
+![Data Science model: Artwork by @allison_horst ](environmental-data-science-r4ds-general.png)
+
+
+### Load packages
+
+```{r}
+#install.packages("tidyverse")#this code install package
+library(tidyverse)#this code load a package
+
+```
+
+We will use the  mpg data frame available in the ggplot2. ggplot2 is always loaded if you load the tidyverse package.
+
+What is the first step when you start working with a new dataset? mpg is included in the ggplot2 package that is always loaded if you load the tidyverse package. You can use the ?mpg code to know more about the dataset.
+
+## Getting to know the data
+
+```{r}
+mpg
+?mpg#displ, a car’s engine size, in litres.hwy, a car’s fuel efficiency on the highway, in miles per gallon (mpg)
+
+```
+
+It is also possible to get more info about the dataset by running the below code:
+
+```{r}
+glimpse(mpg)# overview of the dataset in the console
+colnames(mpg)# print the name of all the columns in the dataset
+
+```
+
+Now that we got to know the data more it is time to begin our exploratory analysis using visualizations!!!
+
+
+### Creating your first plot (empty canvas/cake base + layers)
+Up to now we have learned to print dataset and provide descriptive statistics of variables of interest (summarise, right?). Let's start visualizing our data to finishing our data exploration task.
+
+With ggplot2, you begin a plot with: 
+
+- the function ggplot(). 
+
+```{r fig.width = 6}
+ggplot()#ggplot() creates a coordinate system that you can add layers to. 
+
+```
+
+
+- the first argument of ggplot() is the dataset to use in the graph. So ggplot(data = mpg) creates an empty graph. 
+
+```{r fig.width = 6}
+ggplot(data = mpg)#While the data aren't yet visible they are preloaded in the background.
+
+```
+
+
+- the graph is completed by adding one or more layers to ggplot(). The next layer is the selection of geom. The geom determine the shape of your chart. For example, the function geom_bar() adds a layers of bars which creates a bar plot. While geom_point() adds a layer of points to your plot, which creates a scatterplot. 
+
+```{r fig.width = 6}
+ggplot(data = mpg)+
+  geom_bar(mapping=aes(y=manufacturer))
+
+```
+
+ggplot2 comes with many geom functions that each add a different types of layer to a plot. While the boxplot compactly displays the distribution of a continuous variable. It visualizes five summary statistics (the median, two hinges and two whiskers), and all "outlying" points individually. There are many others geoms available, see ggplot2 website, so it is critical to choose the right geom depending on the objective of your chart. Let's see some example graphs.
+
+With the first chart we want to show the distribution of highway fuel among the cars in this dataset:
+```{r fig.width = 6}
+ggplot(data = mpg) + 
+  geom_bar(mapping = aes(x = hwy))#this chart shows the distribution of highway fuel among the cars in this dataset
+
+```
+
+
+With the second chart we want to show the relation between engine size and highway fuel efficiency. Any surprise? Cars with big engines seem to use more fuel.
+```{r fig.width = 6}
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy))#this chart shows the relation between engine size and highway fuel efficiency. 
+```
+
+
+#### Examples:
+
+```{r}
+# Create a bar chart that show the distribution of the city fuel efficiency (cty) variable
+ggplot(data=mpg)+
+  geom_bar(mapping = aes(x=cty))
+# Create a scatterplot that shows the relationship between engine size and city fuel efficiency
+ggplot(data=mpg)+
+  geom_point(mapping = aes(x=displ, y=cty))
+
+```
+
+
+#### Activity 1 (a & b in class c & d at home): Basic Charts. Write the code to solve the below tasks [write code just below each instruction, finally  use Teams RStudio - Forum channel for help or if you have other questions] - 5 minutes:
+```{r}
+#a) Create a bar chart for the cylinders variable;
+ggplot(data = mpg)+
+  geom_bar(mapping = aes(x=cyl))
+#b) Create a scatterplot between the highway fuel efficiency and number of cylinders. What do you notice?
+ggplot(data = mpg)+
+  geom_point(mapping = aes(x= hwy, y= cyl))
+#c) Create a boxplot that show the distribution of the city fuel efficiency (cty) variable
+
+#d) Create a bar chart for the manufacturer variable;
+
+```
+
+
+*Knowledge Check 1*
+
+![Figure 2. Knowledge Check 1 ](knowledgecheck1.png)
+
+Question: What geom was used in the chart above?
+
+    - answer 1: geom_bar,
+    - answer 2: geom_point,
+    - answer 3: geom_boxplot,
+    - answer 4: geom_plot
+
+
+## More on mapping and aesthetics 
+
+But at this point you are probably wondering what is the purpose of the aes and mapping arguments. 
+Each geom function in ggplot2 takes a mapping argument. This defines how variables in your dataset are mapped to visual properties. The mapping argument is always paired with aes() [aesthetic], and the x and y arguments of aes() specify which variables to map to the x and y axes. ggplot2 looks for the mapped variables in the data argument, in this case, mpg. Let's start by using aes to control the axes.
+
+#### Examples:
+
+```{r}
+# Create a bar chart that show the engine size distribution on the y axis
+ggplot(data = mpg)+
+  geom_bar(mapping = aes(y=displ))
+# Create a scatterplot between the city fuel efficiency (y) and number of cylinders (x).
+ggplot(data = mpg)+
+  geom_point(mapping = aes(y=cty, x=cyl ))
+```
+
+#### Activity 2 (a & b in class c & d at home): Controlling the axes. Write the code to solve the below tasks [write code just below each instruction, finally  use Teams RStudio - Forum channel for help or if you have other questions]  - 5 minutes:
+
+```{r}
+#a) Create a scatterplot between the city fuel efficiency on the y axis and engine size on the x axis. What do you notice?
+ggplot(data=mpg)+
+  geom_point(mapping = aes(y=cty, x=displ))
+#b) Create a bar plot of the city fuel efficiency variable on the y axis.
+ggplot(data=mpg)+
+  geom_bar(mapping = aes(y=cty))
+  
+#c) Create a scatterplot between the manufacturer on the y axis and highway fuel efficiency on the x axis. 
+
+#d) Create a bar plot of the class variable on the x axis.
+
+```
+
+## Chart template: starting point for future charts
+
+So, to summarize in ggplot2 the charts follow the below template:
+
+```{r message = FALSE,warning=FALSE,echo=TRUE}
+#  ggplot(data = <DATA>) + 
+#  <GEOM_FUNCTION>(mapping = aes(<MAPPINGS>))
+  
+
+```
+
+Let's learn how to complete and extend this template to make different types of graphs. We will begin with the <MAPPINGS> component.
+
+## Aesthetic mappings beyond axis
+
+In the first scatterplot some cars were outside the linear trend. How do you explain them? Let’s hypothesize that the cars are hybrids (larger engine but still pretty good mpg). One way to test this hypothesis is to look at the class variable for each car. The class variable of the mpg dataset classifies cars into groups such as compact, midsize, and SUV. If the outlying points are hybrids, they should be classified as compact cars or, perhaps, subcompact cars (old dataset those classes were the only offering an hybrid engine at that time). How can we include the class variable in our original chart?
+
+You can add a third variable, like class, to a two dimensional scatterplot by mapping it to an aesthetic. An aesthetic is a visual property of the objects in your plot. Aesthetics include things like the **color/fill**, the **size**,the **alpha (transparency)** and the **shape**. You can display a point (like the one below) in different ways by changing the values of its aesthetic properties. 
+
+## Aestetic 1: Color/Fill
+
+We want to assign a different point color to each class
+```{r fig.width = 6}
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy, color = class))
+
+```
+The colors reveal that many of the unusual points are two-seater cars. These cars don’t seem like hybrids, and are, in fact, sports cars! Sports cars have large engines like SUVs and pickup trucks, but small bodies like midsize and compact cars, which improves their gas mileage. In hindsight, these cars were unlikely to be hybrids since they have large engines.
+So, we learned that you can convey information about your data by mapping the aesthetics in your plot to the variables in your dataset. For example, we mapped the colors of your points to the class variable to reveal the class of each car.
+
+What should we do if we want to show the distribution of engine size among the cars in this dataset? 
+```{r fig.width = 6}
+ggplot(data= mpg)+ 
+  geom_boxplot(mapping= aes(x=class, y=displ, fill=drv))
+```
+Box plots are better than bar plot in identifying outliers.
+
+In general, to map an aesthetic to a variable, associate the name of the aesthetic to the name of the variable inside aes(). ggplot2 will automatically assign a unique level of the aesthetic (here a unique color) to each unique value of the variable, a process known as scaling. ggplot2 will also add a legend that explains which levels correspond to which values.
+
+#### Examples:
+
+```{r}
+# Create a bar chart that show the engine size distribution on the y axis and use different color for each car class
+
+# Create a scatterplot between the highway fuel efficiency (y) and number of cylinders (x) assign a different color to each manufacturer.
+
+```
+
+#### Activity 3 (a & b in class c & d at home): Charts with 3 variables (color). Write the code to solve the below tasks [write code just below each instruction, finally  use Teams RStudio - Forum channel for help or if you have other questions]  - 5 minutes:
+
+```{r}
+#a. Create a scatterplot between the city fuel efficiency (y) and number of cylinders (x) assign a different color to each manufacturer.
+ggplot(data = mpg)+
+  geom_point(mapping = aes(y=cty, x=cyl, color=manufacturer))
+#b. Create a bar plot of the manufacturers (x) assign a different color to each transmission.
+ggplot(data = mpg)+
+  geom_bar(mapping = aes(x=manufacturer, fill=trans))
+  
+#c. Create a scatterplot between the highway fuel efficiency (y) and engine size (x) assign a different color to each transmission.
+
+#d. Create a boxplot of the city fuel efficiency (y) and engine size (x) assign a different color to each class.
+
+```
+
+
+
+## Aestetic 2: Size
+We could have mapped class to the size aesthetic in the same way. In this case, the exact size of each point would reveal its class affiliation.
+
+```{r fig.width = 6}
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy, size = class, color=class))#Warning: Using size for a discrete variable is not advised. What happen if you assign size to cyl?
+
+
+```
+
+We get a warning here, because mapping an non-ordered variable (class) to an ordered aesthetic (size) is not a good idea. Pay attention to this warnings they are not errors but provide instructions/tips on how to improve your charts!
+
+#### Examples:
+
+```{r}
+# Create a bar chart that show the engine size distribution on the y axis and use different size for each car transmission
+
+# Create a scatterplot between the city fuel efficiency (y) and number of cylinders (x) assign a different size to each class.
+
+```
+
+#### Activity 4 (a & b in class c & d at home): Charts with 3 variables (size).  Write the code to solve the below tasks [write code just below each instruction, finally  use Teams RStudio - Forum channel for help or if you have other questions]  - 5 minutes:
+
+```{r}
+#a. Create a scatterplot between the city fuel efficiency (y) and number of cylinders (x) assign a different size to each manufacturer.
+ggplot(data = mpg)+
+  geom_point(mapping = aes(y=cty, x=cyl, size=manufacturer))
+#b. Create a scatterplot between the highway fuel efficiency (y) and engine size (x) assign a different size to each cyl.
+ggplot(data = mpg)+
+  geom_point(mapping = aes(y=hwy, x=displ, size=cyl))
+  
+#c. Create a scatterplot between the city fuel efficiency (y) and transmission (x) assign a different size to each class.
+
+#d. Create a scatterplot between the class (y) and trans (x) assign a different size to the hwy variable.
+
+```
+
+## Aestetic 3: Alpha (transparency)
+
+We have seen mappings to color and size but we could have mapped class to the alpha aesthetic, which controls the transparency of the points. Let's what happens.
+
+```{r fig.width = 6, message = FALSE,warning=FALSE,echo=TRUE}
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy, alpha = class))
+
+
+```
+
+#### Examples:
+```{r}
+
+# Create a bar chart that show the engine size distribution on the y axis and use different transparency for each car class
+
+# Create a scatterplot between the city fuel efficiency (y) and number of cylinders (x) assign a different transparency to each manufacturer.
+
+```
+
+#### Activity 5 (a & b in class c & d at home): Charts with 3 variables (trasparency). Write the code to solve the below tasks [write code just below each instruction, finally  use Teams RStudio - Forum channel for help or if you have other questions]  - 5 minutes:
+
+```{r}
+#a. Create a scatterplot between the city fuel efficiency (y) and engine size (x) assign a different transparency to each transmission.
+ggplot(data = mpg)+
+  geom_point(mapping = aes(y=cty, x=displ, alpha=trans))
+#b. Create a bar plot of the manufacturer variable (x) assign a different transparency to each class.
+ggplot(data = mpg)+
+  geom_bar(mapping = aes(x=manufacturer, alpha=class, fill=class))
+#c. Create a scatterplot between the highway fuel efficiency (y) and number of cylinders (x) assign a different transparency to each class
+
+#d. Create a boxplot of the class (y) and cty (x) assign a different transparency to the cty variable.
+
+```
+
+
+## Aestetic 4: Shape
+
+Let's see now how to map class to the shape aesthetic, which controls the shape of the points. 
+
+```{r fig.width = 6, message = FALSE,warning=FALSE,echo=TRUE}
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy, shape = drv, color=drv))#What happened to the SUVs? ggplot2 will only use six shapes at a time. By default, additional groups will go unplotted when you use the shape aesthetic.
+
+```
+
+#### Examples:
+```{r}
+
+# Create a bar chart that show the engine size distribution on the y axis and use different shape for each car class
+
+# Create a scatterplot between the city fuel efficiency (y) and number of cylinders (x) assign a different shape to each manufacturer.
+
+```
+
+#### Activity 6 (a & b in class c & d at home): Charts with 3 variables (shape). Write the code to solve the below tasks [write code just below each instruction, finally  use Teams RStudio - Forum channel for help or if you have other questions]  - 5 minutes:
+
+
+```{r}
+#a. Create a scatterplot between the city fuel efficiency (y) and number of cylinders (x) assign a different shape to each transmission.
+
+#b. Create a scatterplot between the highway fuel efficiency (y) and engine size (x) assign a different shape to each class
+
+#c. Create a scatterplot between the trans (y) and number of cylinders (x) assign a different shape to each drv
+
+#d. Create a scatterplot of the model (y) and cty (x) assign a different shape to the manufacturer variable.
+
+```
+
+## Multiple aestethics on the same chart
+
+Now that we have seen the most common aestethics, it is time to make sure that you can identify them on a chart when they are used in combination.
+
+*Knowledge Check 2*
+
+![Figure 3. Knowledge Check 2 ](knowledgecheck2.png)
+
+Question: What aestethics were used in the chart above?
+
+    - answer 1: color only,
+    - answer 2: color & alpa,
+    - answer 3: color & size,
+    - answer 4: color & shape
+
+
+Moreover, can you replicate the above chart? Try to write the code in the chunk below.
+
+```{r}
+ 
+```

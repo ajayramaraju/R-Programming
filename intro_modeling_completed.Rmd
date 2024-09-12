@@ -1,0 +1,440 @@
+---
+title: "Week 10 materials"
+author: "Biagio Palese"
+date: "`r format(Sys.time(), '%d %B, %Y')`" 
+output: 
+  html_document:
+    theme: flatly
+    toc: TRUE
+    toc_float: TRUE
+    code_download: TRUE
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE, cache = F}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  error = TRUE,
+  warning= FALSE,
+  message= FALSE)
+```
+
+# Introduction to modeling
+
+In the second part of the course we will leverage the following resources:
+
+-   The Tidy Modeling with R book [second portion of the course book](https://www.tmwr.org)
+-   The Tidy Models website [second portion of the course website](https://www.tidymodels.org)
+
+#### Link to other resources
+
+-   Internal help: [posit support](https://support.posit.co/hc/en-us)
+
+-   External help: [stackoverflow](https://stackoverflow.com/search?q=rstudio&s=25d8522e-3191-4bf2-ae3b-ccad762aeca9)
+
+-   Additional materials: [posit resources](https://posit.co/resources/)
+
+-   Cheat Sheets: [posit cheat sheets](https://posit.co/resources/cheatsheets/)
+
+While I use them as a reference the materials provided to you are custom made and include more activities and resources. If you understand the materials covered in this document there is no need to refer to other sources. If you have any troubles with the materials don't hesitate to contact me or check the above sources.
+
+![Data Science model: Artwork by @allison_horst](environmental-data-science-r4ds-general.png)
+
+### Class Objectives
+
+-   Understand the broad scope and importance of data modeling in predictive analytics and its impact on informed decision-making.
+-   Introduce the `tidymodels` framework, highlighting its comprehensive ecosystem designed to streamline the predictive modeling process in R.
+-   Establish a foundational modeling using `tidymodels`, emphasizing practical application through the exploration of the `ames` dataset.
+
+## The Importance of Data Modeling
+
+Data modeling is an intricate process that leverages a multitude of techniques for analyzing historical data to make well-informed predictions, accurate classifications, and insightful recommendations. It forms the bedrock of data science and analytics, enabling the derivation of actionable insights from raw data. This transformative process is pivotal in translating vast and intricate datasets into coherent, actionable insights that drive strategic decision-making, enhance operational efficiencies, and yield a competitive edge in the marketplace.
+
+At its core, data modeling is about understanding the past to make informed projections about the future. It employs statistical analysis, machine learning algorithms, and computational techniques to sift through historical data, identifying underlying patterns, correlations, and trends. These insights are then used to forecast future events, classify data into meaningful categories, and formulate recommendations that guide decision-making processes.
+
+### The Multifaceted Applications of Data Modeling
+
+The applications of data modeling are vast and varied, spanning across industries and functions. Its significance is universally acknowledged, from enhancing customer experiences to revolutionizing scientific research. Here’s a closer look at its key applications:
+
+-   ***Forecasting Future Trends***: Data modeling is instrumental in predicting future occurrences, whether it's anticipating market demand, forecasting stock prices, or predicting weather patterns. These predictions allow organizations to prepare and adapt their strategies in anticipation of future changes, ensuring they remain ahead of the curve.
+
+-   ***Optimizing Business Strategies***: By harnessing the power of data modeling, businesses can optimize their operations and strategies for maximum efficiency and effectiveness. This could involve allocating resources more efficiently, streamlining supply chains, or personalizing marketing efforts to target consumers more effectively. Data-driven strategies empower businesses to make informed decisions that bolster growth and profitability.
+
+-   ***Enhancing Decision-Making***: Data modeling provides a quantitative basis for decision-making, offering insights that help reduce uncertainty and risk. By understanding the likely outcomes of different decisions, leaders can choose paths that align with their objectives and risk tolerance.
+
+-   ***Driving Innovation and Discovery***: Beyond its practical applications in business and industry, data modeling is a cornerstone of scientific research and technological innovation. It facilitates the discovery of new knowledge, the development of innovative products and services, and the exploration of new frontiers in science and technology.
+
+-   ***Understanding Complex Patterns***: In the era of big data, the ability to navigate and make sense of complex data patterns is invaluable. Data modeling unravels these patterns, revealing insights that can lead to breakthroughs in understanding consumer behavior, societal trends, and even biological processes.
+
+### The Strategic Edge
+
+In a world inundated with data, the ability to effectively model and interpret this data is a key differentiator for businesses and organizations. Data modeling elevates strategic planning and operational decision-making from intuition-based to data-driven, marking a transition towards more agile, responsive, and efficient operations. It is not merely a tool for gaining insights but a strategic asset that enables organizations to innovate, compete, and thrive in their respective domains.
+
+## Types of Modeling
+
+Modeling techniques can be broadly classified into three major categories, each serving a distinct purpose and employing different methodologies to analyze data and derive insights. These categories are foundational to understanding the scope and application of data analytics in solving real-world problems.
+
+#### **Descriptive Modeling**
+
+-   **Objective:** Descriptive modeling, or descriptive analytics, aims to summarize historical data to understand past behaviors, patterns, and trends. It's the first step in data analysis, providing a foundational understanding of the data at hand.
+-   **Applications:** Common applications include reporting sales numbers, marketing campaign performance, financial metrics, and customer demographics. Descriptive models are used extensively in dashboards and reports to provide real-time insights into business operations.
+
+
+#### **Predictive Modeling**
+
+-   **Objective:** Predictive modeling uses historical data to forecast future outcomes. It identifies patterns and relationships in the data to make predictions about future events, behaviors, or states. Predictive modeling is inherently probabilistic, providing predictions with associated uncertainty levels.
+-   **Applications:** It's widely used for customer churn prediction, credit scoring, demand forecasting, risk management, and many other areas where future insights can guide decision-making.
+
+
+#### **Prescriptive Modeling**
+
+-   **Objective:** Prescriptive modeling goes a step further than predictive modeling by not only forecasting future outcomes but also recommending actions to benefit from predictions. It considers various possible decisions and identifies the best course of action.
+-   **Applications:** Prescriptive analytics is crucial in supply chain management, optimizing resource allocation, strategic planning, and operational efficiency. It can suggest the best strategies for inventory management, marketing approaches, and even clinical treatment plans.
+
+
+### Why Predictive Modeling?
+
+Predictive modeling is central to this course, emphasizing its vital role in forecasting future events and behaviors. It leverages statistical and/or machine learning techniques to estimate unknown outcomes, crucial for strategic planning and decision-making across various sectors.
+
+### Key Aspects of Predictive Modeling
+
+When considering predictive modeling, several additional factors and best practices are important to ensure the effectiveness and reliability of your models. Incorporating these considerations can enhance model performance and applicability to real-world scenarios:
+
+-   **Feature Engineering:**
+    -   **Crucial for Model Performance:** The process of creating new input features (independent variable) from your existing data can significantly enhance model accuracy by providing additional context and information.
+    -   **Domain Knowledge Integration:** Leveraging domain knowledge to create meaningful features can uncover relationships that generic models might miss.
+-   **Model Interpretability:**
+    -   **Understanding Model Predictions:** Especially in sectors like finance and healthcare, understanding how and why a model makes certain predictions is crucial. Techniques for improving model interpretability include using simpler models (when possible) and applying tools designed to explain model decisions.
+    -   **Transparency and Trust:** Models that are interpretable foster trust among stakeholders and facilitate the implementation of model recommendations.
+-   **Handling Imbalanced Data:**
+    -   **Challenge in Classification Tasks:** Many real-world problems involve imbalanced datasets, where the classes are not equally represented. This imbalance can bias the model toward the majority class, reducing its performance on the minority class.
+    -   **Techniques for Addressing Imbalance:** Strategies include oversampling the minority class, undersampling the majority class, and using specialized algorithms designed to handle imbalance.
+-   **Ethical Considerations and Fairness:**
+    -   **Bias and Fairness:** Models can inadvertently perpetuate or even exacerbate biases present in the training data. It's crucial to evaluate models for fairness and to take steps to mitigate any discovered biases.
+    -   **Privacy Concerns:** Data used in modeling often includes personal information. Ensuring data privacy and compliance with regulations (e.g., GDPR) is essential.
+-   **Model Deployment and Monitoring:**
+    -   **Operationalizing Models:** Deploying models into production requires careful planning, including considerations for scalability, latency, and integration with existing systems.
+    -   **Continuous Monitoring:** Once deployed, models should be continuously monitored for performance drift and retrained as necessary to adapt to changes in the underlying data.
+-   **Collaboration and Communication:**
+    -   **Working with Stakeholders:** Effective communication with stakeholders about model capabilities, limitations, and performance is essential. Collaborative model development ensures that the model meets the business needs and that stakeholders understand and trust the model's predictions.
+    -   **Documentation:** Comprehensive documentation of the modeling process, decisions made, and model performance metrics aids in transparency, reproducibility, and facilitates ongoing maintenance.
+
+Incorporating these considerations into your predictive modeling projects not only enhances model accuracy and reliability but also ensures that your models are ethical, interpretable, and aligned with business objectives and regulatory requirements.
+
+## Introduction to tidymodels
+
+`tidymodels` is a collection of R packages that provides a comprehensive framework for modeling, designed to work seamlessly within the tidyverse ecosystem. It simplifies and standardizes the process of building, tuning, and evaluating models, making predictive modeling more accessible and reproducible.
+
+### Part 1: Introduction to the `tidymodels` ecosystem
+
+The ecosystem includes packages like:
+
+-   **`recipes`: Data Preprocessing**
+    -   Facilitates the creation of preprocessing steps for data, including feature engineering, normalization, and handling missing values.
+    -   Enables the specification of a series of preprocessing operations to prepare data for modeling systematically.
+-   **`parsnip`: Model Specification**
+    -   Provides a unified interface to specify a wide array of models from different packages without getting into package-specific syntax.
+    -   Allows for easy model switching and comparison by standardizing model syntax.
+-   **`workflows`: Streamlining Model Fitting**
+    -   Combines model specifications and preprocessing recipes into a single object, simplifying the process of model training and prediction.
+    -   Ensures that the preprocessing steps are applied consistently during both model training and prediction phases.
+-   **`tune`: Hyperparameter Optimization**
+    -   Supports the tuning of model hyperparameters to find the optimal model configuration.
+    -   Integrates with `resampling` methods to evaluate model performance across different hyperparameter settings systematically.
+-   **`yardstick`: Model Evaluation**
+    -   Offers a suite of functions to calculate performance metrics for models, such as accuracy, RMSE, and AUC, among others.
+    -   Allows for a consistent and straightforward way to assess and compare model performance.
+-   **`broom`: Tidying Model Outputs**
+    -   Helps in converting model outputs into tidy formats, making them easier to work with within the tidyverse.
+    -   Provides functions to extract model statistics, performance measures, and other relevant information in a user-friendly structure.
+
+Each component of the `tidymodels` ecosystem is designed to address specific aspects of the model building and evaluation process, making it easier for data scientists to develop, tune, and deploy models efficiently and effectively. Together, these packages offer a comprehensive framework that enhances the modeling workflow in R, adhering to the principles of tidy data and reproducible research.
+
+#### So, why `tidymodels`?
+
+-   **Consistency:** Offers a unified interface for various modeling tasks.
+-   **Integration:** Fully compatible with `tidyverse` packages for data manipulation and visualization.
+-   **Flexibility:** Supports a wide range of statistical and machine learning models.
+
+## The `tidymodels` Ecosystem in action
+
+After this theoretical introduction let's check the `tidymodels` ecosystem in action with an overview of the , highlighting its components like `recipes`, `parsnip`, `workflows`, etc., and how it integrates with the `tidyverse`.
+
+#### Installing and Loading `tidymodels`
+
+```{r}
+#install.packages("tidymodels")
+library(tidymodels)
+```
+
+#### Exploring the `ames` Dataset
+
+Introduce the `ames` housing data as an example. Briefly explore the dataset to understand the variables and the modeling objective (predicting house prices).
+
+```{r}
+data(ames, package = "modeldata")
+?ames
+glimpse(ames)
+view(ames)
+```
+
+##### **Activity 0: Get to know and Explore the ames dataset. The objective here is to leverage what we learned so far to understand the data. Keep in mind that Sale_Price will be our dependent variable in supervised modeling. Identify possible relevant independent variables by producing charts and descriptive stats.Think also about potential manipulations needed on those variables/creating new variables. Write all the code to complete the task in the chunk below [write code just below each instruction; for help use Teams RStudio - Forum channel] - 15 minutes**
+```{r}
+
+```
+
+The `ames` housing dataset will be used as a case study for this section of the course, demonstrating the practical application of predictive modeling techniques.
+
+### Part 2: Data Preprocessing with `recipes`
+
+![Recipes: Artwork by @allison_horst](recipes.png)
+
+Let's delve into the concept of a recipe in the context of data preprocessing within the `tidymodels` framework, followed by creating a simple recipe for the `ames` dataset.
+
+#### Understanding the Concept of a Recipe in Data Preprocessing
+
+In the `tidymodels` ecosystem, a recipe is a blueprint that outlines how to prepare your data for modeling. It's a series of instructions or steps that transform raw data into a format more suitable for analysis, ensuring that the preprocessing is systematic and reproducible. Here’s why recipes are pivotal in the data science workflow:
+
+-   **Standardization and Normalization:** Recipes can include steps to standardize (scale) or normalize (transform) numerical data, ensuring that variables are on comparable scales. Main functions:
+    -   step_log() –\> Applies log transformation
+    -   step_normalize() –\> Normalizes predictors by standardizing them (mean 0, sd 1)
+    -   step_scale() –\> Normalizes predictors by standardizing them (sd 1)
+-   **Handling Missing Data:** They allow you to specify methods for imputing missing values, ensuring the model uses a complete dataset for training. Main functions:
+    -   step_impute_median() –\> Imputes missing numeric values with the median
+    -   step_impute_mean() –\> Imputes missing categorical values with the average
+-   **Encoding Categorical Variables:** Recipes describe how to convert categorical variables into a format that models can understand, typically through one-hot encoding or other encoding strategies. Main functions:
+    -   step_dummy() –\> Creates dummy variables for categorical predictors
+    -   step_other() –\> Collapses infrequent factors into an "other" category
+-   **Feature Engineering:** A recipe can include steps for creating new features from existing ones, enhancing the model's ability to learn from the data. Main functions:
+    -   step_mutate() –\> Creates a new feature from an existing one
+    -   step_interact() –\> Creates interaction terms between features
+-   **Data Filtering and Selection:** They can also be used to select specific variables or filter rows based on certain criteria, tailoring the dataset to the modeling task. Main functions:
+    -   step_select() –\> Selects specific variables to retain in the dataset
+    -   step_slice() –\> Randomly selects a subset of rows
+
+By defining these steps in a recipe, you create a reproducible set of transformations that can be applied to any dataset of the same structure. This reproducibility is crucial for maintaining the integrity of your modeling process, especially when moving from a development environment to production.
+
+#### Creating a Simple Recipe for the `ames` Dataset
+
+Let's create a basic recipe for the `ames` housing dataset, focusing on preprocessing steps that are commonly required for this type of data. Our goal is to predict house sale prices, so we'll include steps to log-transform the target variable (to address skewness) and normalize the numerical predictors.
+
+![Normalize Distribution and More: Artwork by Allison Horst](normal.png)
+
+```{r}
+
+# Define the recipe
+ames_recipe <- recipe(Sale_Price ~ ., data = ames) |>
+  # Log-transform the Sale_Price to normalize its distribution
+  step_log(Sale_Price, base = 10) |>
+  # Normalize numerical predictors
+  step_normalize(all_numeric_predictors()) |>
+  # Prepare for modeling by converting factor variables into dummy variables
+  step_dummy(all_nominal_predictors())
+
+# Review the recipe steps
+ames_recipe
+```
+
+This recipe outlines a series of preprocessing steps tailored to the `ames` dataset:
+
+-   The `step_log()` function applies a log transformation to the `Sale_Price`, which is a common technique to normalize the distribution of the target variable in regression tasks.
+
+-   The `step_normalize()` function scales numerical predictors, ensuring they contribute equally to the model's predictions.
+
+-   The `step_dummy()` function converts categorical variables into a series of binary (0/1) columns, enabling models to incorporate this information.
+
+By preparing the data with this recipe, we enhance the dataset's suitability for predictive modeling, improving the potential accuracy and interpretability of the resulting models.
+
+Recipes in `tidymodels` provide a flexible and powerful way to specify and execute a series of data preprocessing steps, ensuring that your data science workflow is both efficient and reproducible.
+
+##### Activity 1 (a & b in class, c & d at home): Preprocessing with Recipes. Write the code to complete the below tasks [write code just below each instruction, finally use Teams RStudio - Forum channel for help or if you have other questions] - 7 minutes
+
+```{r}
+
+# Start your recipe with predicting Sale_Price from all other variables
+ames_recipe <- recipe(Sale_Price ~ ., data = ames)
+
+# a. Standardize the 'Gr_Liv_Area', and impute missing values for 'Lot_Frontage' with median, and for 'Garage_Type' with mean.
+ames_recipe <- ames_recipe |>
+  
+
+# b. Create dummy variables for 'Neighborhood', and normalize 'Year_Built'.
+ames_recipe <- ames_recipe |>
+
+
+# c. Create an interaction term between 'Overall_Qual' and 'Gr_Liv_Area' and standardize the Lot_Area variable.
+ames_recipe <- ames_recipe |>
+  
+
+# d. Use recipe to keep only 'Sale_Price', 'Overall_Qual', 'Gr_Liv_Area', 'Year_Built', and slice the dataset to select a random 500 of the rows.
+ames_recipe <- ames_recipe |>
+
+```
+
+### Part 3: Building Supervised Models with `parsnip` in `tidymodels`
+
+The `parsnip` package is a cornerstone of the `tidymodels` ecosystem designed to streamline and unify the process of model specification across various types of models and machine learning algorithms. Unlike traditional approaches that require navigating the syntax and idiosyncrasies of different modeling functions and packages, `parsnip` abstracts this complexity into a consistent and intuitive interface. Here's why `parsnip` stands out:
+
+-   **Unified Interface:** `parsnip` offers a single, cohesive syntax for specifying a wide range of models, from simple linear regression to complex ensemble methods and deep learning. This uniformity simplifies learning and reduces the cognitive load when switching between models or trying new methodologies. Main models:
+
+#### **Regression Models**
+
+**Linear Regression:**
+
+**When to Use:** Ideal for predicting continuous outcomes when the relationship between independent variables and the dependent variable is linear.
+
+**Example:** Predicting house prices based on attributes like size (square footage), number of bedrooms, and age of the house.
+
+```{r}
+linear_reg() |>
+  set_engine("lm") |>
+  set_mode("regression")
+```
+
+**Ridge Regression:**
+
+**When to Use:** Useful when dealing with multicollinearity (independent variables are highly correlated) in your data or when you want to prevent overfitting by adding a penalty (L2 regularization) to the size of coefficients.
+
+**Example:** Predicting employee salaries using a range of correlated features like years of experience, level of education, and job role.
+
+```{r}
+linear_reg(penalty = 0.1, mixture = 0) |>
+  set_engine("glmnet") |>
+  set_mode("regression")
+```
+
+**Lasso Regression:**
+
+**When to Use:** Similar to Ridge regression but can shrink some coefficients to zero, effectively performing variable selection (L1 regularization). Useful for models with a large number of predictors, where you want to identify a simpler model with fewer predictors.
+
+**Example:** Selecting the most impactful factors affecting the energy efficiency of buildings from a large set of potential features.
+
+```{r}
+linear_reg(penalty = 0.1, mixture = 1) |>
+  set_engine("glmnet") |>
+  set_mode("regression")
+```
+
+#### **Classification Models**
+
+**Logistic Regression:**
+
+**When to Use:** Suited for binary classification problems where you predict the probability of an outcome that can be one of two possible states.
+
+**Example:** Determining whether an email is spam or not based on features like the frequency of certain words, sender reputation, and email structure.
+
+```{r}
+logistic_reg() |>
+  set_engine("glm") |>
+  set_mode("classification")
+```
+
+**Support Vector Machines (SVM):**
+
+**When to Use:** Effective for both binary and multiclass classification problems, especially in cases where the boundary between classes is not linear. SVMs can use kernel functions to transform the input space and find an optimal boundary.
+
+**Example:** Classifying images of animals into different categories where the distinction between categories is complex.
+
+```{r}
+svm_linear() |>
+  set_engine("kernlab") |>
+  set_mode("classification")
+```
+
+**Tree-Based Models:**
+
+-   **Decision Tree:**
+
+**When to Use:** Good for classification and regression with a dataset that includes non-linear relationships. Decision trees are interpretable and can handle both numerical and categorical data.
+
+**Example:** Predicting customer churn based on a variety of customer attributes such as usage patterns, service complaints, and demographic information.
+
+```{r}
+decision_tree() |>
+  set_engine("rpart") |>
+  set_mode("classification")  # or "regression"
+```
+
+-   **Gradient Boosted Models:**
+
+**When to Use:** When you require a robust predictive model for both regression and classification that can automatically handle missing values and does not require scaling of data. It builds trees in a sequential manner, minimizing errors from previous trees.
+
+**Example:** Predicting with high accuracy complex outcomes such as future sales amounts across different stores and products.
+
+```{r}
+boost_tree() |>
+  set_engine("xgboost") |>
+  set_mode("classification")  # or "regression"
+```
+
+**Random Forest:**
+
+**When to Use:** Suitable for scenarios where high accuracy is crucial, and the model can handle being a "black box." Works well for both classification and regression tasks and is robust against overfitting.
+
+**Example:** Diagnosing diseases from patient records where there's a need to consider a vast number of symptoms and test results.
+
+```{r}
+rand_forest(mtry = 2, trees = 1000) |>
+  set_engine("ranger") |>
+  set_mode("classification")
+```
+
+#### Deep Learning
+
+-   **Neural Network:**
+
+**When to Use:** Best for capturing complex, nonlinear relationships in high-dimensional data. Neural networks excel in tasks like image recognition, natural language processing, and time series prediction.
+
+**Example:** Recognizing handwritten digits where the model needs to learn from thousands of examples of handwritten digits.
+
+```{r}
+mlp() |>
+  set_engine("keras") |>
+  set_mode("regression")  # or "classification"
+```
+
+Each of these model functions can be specified with `parsnip`'s unified interface, allowing you to easily switch between them or try new models with minimal syntax changes. The choice of model and the specific parameters (`penalty`, `mtry`, `trees`, etc.) should be guided by the nature of your data, the problem at hand, and possibly iterative model tuning processes like cross-validation.
+
+-   **Engine Independence:** Behind the scenes, many models can be fitted using different computational engines (e.g., `lm`, `glmnet`, `ranger`). `parsnip` allows you to specify the model once and then choose the computational engine separately, providing flexibility and making it easy to compare the performance of different implementations.
+
+-   **Integration with `tidymodels`:** `parsnip` models seamlessly integrate with other `tidymodels` packages, such as `recipes` for data preprocessing, `workflows` for bundling preprocessing and modeling steps, and `tune` for hyperparameter optimization.
+
+#### Starting Simple: Specifying a Linear Regression Model Using `parsnip`
+
+![Parsnip: Artwork by @allison_horst](parsnip.png)
+
+Linear regression is one of the most fundamental statistical and machine learning methods, used for predicting a continuous outcome based on one or more predictors. Let's specify a linear regression model using `parsnip` for the `ames` housing dataset, aiming to predict the sale price of houses from their characteristics.
+
+```{r}
+# Specify a linear regression model
+linear_mod <- linear_reg() |>
+  set_engine("lm") |>
+  set_mode("regression")
+
+# Review the model specification
+linear_mod
+```
+
+In this specification:
+
+-   `linear_reg()` initiates the specification of a linear regression model. At this stage, we're defining the type of model but not yet fitting it to data.
+
+-   `set_engine("lm")` selects the computational engine to use for fitting the model. Here, we use `"lm"`, which stands for linear models, a base R function well-suited for fitting these types of models.
+
+-   `set_mode("regression")` indicates that we are performing a regression task, predicting a continuous outcome.
+
+This process outlines the model we intend to use without binding it to specific data. The next steps typically involve integrating the prepared data (using a recipe), fitting the model to training data, and evaluating its performance. `parsnip`'s design makes these steps straightforward and consistent across different types of models, enhancing the reproducibility and scalability of your modeling work. Through the abstraction provided by `parsnip`, model specification becomes not only more straightforward but also more adaptable to different contexts and needs, facilitating a smoother workflow in predictive modeling projects.
+
+##### Activity 2 (a & b in class, c & d at home): Exploring modeling with parsnip. Write the code to complete the tasks below [write code just below each instruction; for help or queries, use Teams RStudio - Forum channel] - 7 minutes
+
+```{r}
+# a. Fit a linear regression model (lm) predicting 'Sale_Price' using 'Lot_Area'
+
+# b. Fit a linear regression model (lm) predicting 'Sale_Price' using 'Gr_Liv_Area' and 'Lot_Area'
+
+# c.  Fit a decision tree model to predict 'Sale_Price' using 'Lot_Area' and 'Year_Built'.
+
+# d. Fit a decision tree mode model (lm) predicting 'Sale_Price' using 'Gr_Liv_Area' and 'Lot_Area'
+```
+

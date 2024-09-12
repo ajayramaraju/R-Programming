@@ -1,0 +1,703 @@
+---
+title: "Week 13 materials"
+author: "Biagio Palese"
+date: "`r format(Sys.time(), '%d %B, %Y')`" 
+output: 
+  html_document:
+    theme: flatly
+    toc: TRUE
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+    code_download: TRUE
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE, cache = F}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  error = TRUE,
+  warning= FALSE,
+  message= FALSE)
+```
+
+# Supervised modeling final steps
+
+In the second part of the course we will mainly leverage the following resources:
+
+-   The Tidy Modeling with R book [second portion of the course book](https://www.tmwr.org)
+-   The Tidy Models website [second portion of the course website](https://www.tidymodels.org)
+
+#### Link to other resources
+
+-   Internal help: [posit support](https://support.posit.co/hc/en-us)
+
+-   External help: [stackoverflow](https://stackoverflow.com/search?q=rstudio&s=25d8522e-3191-4bf2-ae3b-ccad762aeca9)
+
+-   Additional materials: [posit resources](https://posit.co/resources/)
+
+-   Cheat Sheets: [posit cheat sheets](https://posit.co/resources/cheatsheets/)
+
+While I use them as a reference the materials provided to you are custom made and include more activities and resources. If you understand the materials covered in this document there is no need to refer to other sources. If you have any troubles with the materials don't hesitate to contact me or check the above sources.
+
+![Data Science model: Artwork by @allison_horst](environmental-data-science-r4ds-general.png)
+
+### Class Objectives
+
+-   Interpreting the results and making future prices forecasts.
+
+#### Recap
+
+#### Installing and Loading necessary packages
+
+```{r}
+#install.packages("tidymodels")
+library(tidymodels)
+library(janitor)
+```
+
+#### Exploring the `ames` Dataset
+
+Introduce the `ames` housing data as an example. Briefly explore the dataset to understand the variables and the modeling objective (predicting house prices).
+
+```{r}
+data(ames, package = "modeldata")
+?ames
+glimpse(ames)
+ames_clean <- ames |> 
+  clean_names() |> 
+  #clean column name and put everything lowercase thanks to the janitor package
+  mutate(price_log= log(sale_price, base = 10), 
+         total_sf= total_bsmt_sf+first_flr_sf+second_flr_sf,
+         total_bath= bsmt_full_bath+bsmt_half_bath+full_bath+half_bath)
+    # apply manipulations that are needed across multiple models
+
+glimpse(ames_clean)
+
+```
+
+### Data Splitting and Cross-validation
+
+So far we have run our models on the entire ames dataset. However, by doing so we have no data left to evaluate and assess our model performance on unseen data. Here are the two commonly used methods to preserve data for assessing models performance:
+
+-   Data Splitting
+
+While a simple train-test split is quicker and easier, especially for exploratory analysis or when computational resources are limited, cross-validation provides a more thorough and unbiased evaluation of the model's performance. The choice between these methods depends on the specific needs of your project, including the size of the dataset, the computational complexity of the models, and the level of accuracy required in the performance estimation. We will learn it using data splitting.
+
+#### Data Splitting
+
+When it comes to data modeling (and model evaluation), one of the most adopted method is to split the data into a training set and a test set from the beginning. Here’s how this simple method can be implemented and its implications:
+
+```{r}
+
+# Split the data
+set.seed(123)# setting a seed will ensure reproducibility
+ames_split <- initial_split(ames_clean, prop = 0.75) # define the split and its data proportion
+ames_train <- training(ames_split) #create a train set
+ames_test <- testing(ames_split)#create a test set
+```
+
+-   **Benefits of Train-Test Split:**
+    -   **Simplicity and Speed:** It's straightforward to understand, implement and computationally less intensive than other methods.
+    -   **Direct Evaluation:** Provides a clear, direct way to assess how the model performs on unseen data.
+-   **Something to consider:**
+    -   **Potential Data Wastage:** Splitting the dataset reduces the amount of data available for training the model, which might be a concern for smaller datasets.
+    -   **Risk of Bias:** If the split is not representative, it can introduce bias in the evaluation, making the model appear to perform better or worse than it actually does. Less robust than other methods.
+
+
+### Example: Making prediction and evaluating different models' prediction performance with data splitting
+
+So far we have learned that we can define different models and that the model selection affect the final results. In this example, we explore the predictions' outcome between using `lm` for standard linear regression and `glmnet` for regularized linear regression (Lasso). We will do that using two very different recipes. Recipe1 will be based on a multiple linear regression model with just total_sf and total_bath (two predictors with the highest correlation with sale_price), while recipe 2 will use all the independent variables in our dataset.
+
+#### Setting up the example recipes
+
+```{r}
+# Define recipe 1
+example_recipe1 <- recipe(price_log ~ total_sf + total_bath, data = ames_train) |>
+  step_normalize(all_numeric_predictors())
+# Review the recipe steps
+example_recipe1
+
+
+# Define recipe 2
+example_recipe2 <- recipe(price_log ~ ., data = ames_train) |>
+  step_normalize(all_numeric_predictors()) |> 
+  step_dummy(all_nominal_predictors()) 
+# Review the recipe steps
+example_recipe2
+
+```
+
+#### Specifying the two model
+
+We specify two models using `parsnip`: one with the `lm` engine for basic linear regression and another with the `glmnet` engine for Lasso regression, which includes a penalty term to regularize the coefficients.
+
+```{r}
+# Linear regression with lm
+linear_mod_reg <- linear_reg() |>
+  set_engine("lm") |>
+  set_mode("regression")
+
+# Lasso regularized linear regression with glmnet
+linear_mod_lasso <- linear_reg(penalty = 0.1, mixture = 1) |>
+  set_engine("glmnet") |>
+  set_mode("regression")
+```
+
+#### Fitting example models using the workflow
+
+Next, we fit both models to the `ames_train` dataset,so that we can compare their predictions performance on `ames_test`. This is accomplished by embedding the model specifications within `workflows` that also incorporate our preprocessing `recipes`.
+
+```{r}
+# Workflows for linear regression
+recipe1_workflow_reg <- workflow() |>
+  add_recipe(example_recipe1) |>
+  add_model(linear_mod_reg) |>
+  fit(data = ames_train)#we create and fit the workflow on just the train set
+recipe1_workflow_reg |> print() |> tidy()#check model results
+
+recipe2_workflow_reg <- workflow() |>
+  add_recipe(example_recipe2) |>
+  add_model(linear_mod_reg) |>
+  fit(data = ames_train)#we create and fit the workflow on just the train set
+recipe2_workflow_reg |> print() |> tidy()#check model results
+
+# Workflows for lasso
+recipe1_workflow_lasso <- workflow() |>
+  add_recipe(example_recipe1) |>
+  add_model(linear_mod_lasso) |>
+  fit(data = ames_train)#we create and fit the workflow on just the train set
+recipe1_workflow_lasso |> print() |> tidy()#check model results
+
+recipe2_workflow_lasso <- workflow() |>
+  add_recipe(example_recipe2) |>
+  add_model(linear_mod_lasso) |>
+  fit(data = ames_train)#we create and fit the workflow on just the train set
+recipe2_workflow_lasso |> print() |> tidy()#check model results
+```
+
+## Model Comparison and Evaluation
+
+With the models fitted, so far we just took a quick look at the results. However, before learning how to interpret all the models results, we will learn to assess their performance (there is no point in interpreting them if they perform poorly or are "bad" models). This involves making predictions on our test set, and evaluating the models using metrics suited for regression tasks, such as RMSE (Root Mean Squared Error) or MAE (Mean Absolute Error) or R² (Coefficient of Determination).
+
+### Making predictions and Evaluating Model Performance with Data Splitting
+
+```{r}
+# Making predictions for the linear regression models workflows
+recipe1_predictions_reg <- predict(recipe1_workflow_reg, new_data = ames_test) |> # making the prediction on test data (unseen data)
+  bind_cols(ames_test) |> # add original columns
+   mutate(pred = 10^.pred)  # Inverse of log10, easier to interpret the prediction now that are not in a log10 form
+
+recipe1_predictions_reg |> 
+  select(sale_price, pred) |> view()#check the prediction on test data against actual value (truth)
+
+recipe2_predictions_reg <- predict(recipe2_workflow_reg, new_data = ames_test) |> 
+  bind_cols(ames_test) |> # add original columns
+   mutate(pred = 10^.pred)  # Inverse of log10, easier to interpret the prediction now that are not in a log10 form
+# the warning indicates rank deficiency with our model.
+recipe2_predictions_reg |> 
+  select(sale_price, pred) |> view()#check the prediction on test data against actual value (truth)
+
+    
+# Making predictions for the lasso models workflows
+recipe1_predictions_lasso <- predict(recipe1_workflow_lasso, new_data = ames_test) |> 
+  bind_cols(ames_test) |> # add original columns
+   mutate(pred = 10^.pred)  # Inverse of log10, easier to interpret the prediction now that are not in a log10 form
+
+recipe1_predictions_lasso |> 
+  select(sale_price, pred) |> view()#check the prediction on test data against actual value (truth)
+
+recipe2_predictions_lasso <- predict(recipe2_workflow_lasso, new_data = ames_test) |> 
+  bind_cols(ames_test) |> # add original columns
+   mutate(pred = 10^.pred)  # Inverse of log10, easier to interpret the prediction now that are not in a log10 form
+
+recipe2_predictions_lasso |> 
+  select(sale_price, pred) |> view()#check the prediction on test data against actual value (truth)
+
+```
+
+If you guys noticed when we run predictions using the linear regression model with recipe2 (recipe2_predictions_reg) we got a warning. The warning indicated some rank-deficiency fit. This is usually due to:
+
+-   the presence of highly correlated predictors (multicollinearity). Multicollinearity indicates that we have redundant information from some highly correlated predictors, making it difficult to distinguish their individual effects on the dependent variable.
+
+-   the presence of too many predictors in our model. If the model includes too many predictor variables relative to the number of observations, it can lead to a situation where the predictors cannot be uniquely identified. Meaning that there isn't enough independent information in the data to estimate the model's parameters (the coefficients of the predictor variables) with precision.
+
+Possible solutions are check for multicollinearity and using correlation matrix to identify and then remove highly correlated predictors. Or reduce the number of predictors by performing Principal Components Analysis (PCA). PCA is beyond the scope of this class but regularization methods (e.g., Ridge or Lasso regression) are designed to handle multicollinearity (Ridge in particular), high number of predictors (Lasso in particular) and overfitting. For this reason we don't get a warning when we run the lasso model using recipe2.
+
+In conclusion, while the linear regression model with recipe2 runs (and produce just a warning), we should not attempt to interpret the results because they can misleading and lead to bad decisions. For illustrative scope we will keep that model in but we know that in real life we will have to make changes to what predictors are included in it.
+
+#### Creating Model Metrics to Assess Model Prediction Performance
+
+While seeing the predictions next to the actual house values can already provide some insights on the goodness of the model. In regression analysis, model performance is evaluated using specific metrics that quantify the model's accuracy and ability to generalize. Three fundamental metrics are Root Mean Squared Error (RMSE) , Mean Absolute Error (MAE), and R-squared (R²):
+
+-   **Root Mean Squared Error (RMSE):**
+    -   **What It Measures:** RMSE calculates the square root of the average squared differences between the predicted and actual values. It represents the standard deviation of the residuals (prediction errors).
+    -   **Interpretation:** A lower RMSE value indicates better model performance, with 0 being the ideal score. It quantifies how much, on average, the model's predictions deviate from the actual values.
+    -   **Something to consider:** RMSE is sensitive to outliers. High RMSE values may suggest the presence of large errors in some predictions, highlighting potential model weaknesses.
+-   **Mean Absolute Error (MAE)**:
+    -   **What It Measures**: MAE quantifies the average magnitude of the errors between the predicted values and the actual values, focusing solely on the size of errors without considering their direction. It reflects the average distance between predicted and actual values across all predictions.
+    -   **Interpretation**: MAE values range from 0 to infinity, with lower values indicating better model performance. A MAE of 0 means the model perfectly predicts the target variable, although such a scenario is extremely rare in practice.
+    -   **Something to consider**: MAE provides a straightforward and easily interpretable measure of model prediction accuracy. It's particularly useful because it's robust to outliers, making it a reliable metric when dealing with real-world data that may contain anomalies. MAE helps in understanding the typical error magnitude the model might have in its predictions, offering clear insights into the model’s performance.
+-   **R-squared (R²):**
+    -   **What It Measures:** R², also known as the coefficient of determination, quantifies the proportion of the variance in the dependent variable that is predictable from the independent variables. It provides a measure of how well observed outcomes are replicated by the model.
+    -   **Interpretation:** R² values range from 0 to 1, where higher values indicate better model fit. An R² of 1 suggests the model perfectly predicts the target variable.
+    -   **Something to consider:** R² offers an insight into the goodness of fit of the model. However, it does not indicate if the model is the appropriate one for your data, nor does it reflect on the accuracy of the predictions.
+
+```{r}
+
+model_reg1 <- recipe1_predictions_reg |>   metrics(truth = sale_price, estimate = pred) |>
+  mutate(model="reg_model_recipe1")## Bringing them all together. Remember: rmse the smaller the better; mae the smaller the better; rsq the bigger the better
+model_reg1
+
+model_reg2 <- recipe2_predictions_reg |>   metrics(truth = sale_price, estimate = pred) |>
+  mutate(model="reg_model_recipe2")
+model_reg2
+
+model_lasso1 <- recipe1_predictions_lasso |> 
+  metrics(truth = sale_price, estimate = pred) |> 
+  mutate(model="lasso_model_recipe1")
+model_lasso1  
+
+model_lasso2 <- recipe2_predictions_lasso |> 
+  metrics(truth = sale_price, estimate = pred) |> 
+  mutate(model="lasso_model_recipe2")
+model_lasso2  
+
+all_models_metrics <- bind_rows(model_reg1, model_reg2, model_lasso1,model_lasso2) #bringing all model together
+
+all_models_metrics |> arrange(.metric, .estimate)#sort them to identify the best models --> rmse the smaller the better; mae the smaller the better; rsq the bigger the better. 
+```
+
+#### Identify the best model using models' metrics
+
+Decide which model to proceed with should be based on these metrics, considering RMSE [lower values better], MAE [lower values better] and R² [higher values better]. Sometimes the best model is the one that gives the best compromise among those metrics. They are not always in agreement. Moreover, keep in mind that the choice of model might also depend on other factors such as:
+
+-   Interpretability and complexity of the model.
+
+-   Computational resources and time available.
+
+-   The specific requirements of your application or project.
+
+The linear regression models with recipe 2 seems to be the best model when it comes to this metrics. It has the lowest MAE, lowest RMSE and second to highest R-Squared. However, that model was also troublesome (remember the warning) and it would be very hard to interpret. The lasso model with recipe 2 will have the same interpretability problem and it has a higher MAE than the linear regression with recipe1. The linear regression with recipe1 model will be easy to interpret (only two independent variables) but it explain "only" 55.5% (lowest value) of the variance of sale_price. Lasso model with recipe1 is the worst in MAE and RMSE and the R-Squared is the third worst. In conclusion, it seems that none of the above model is optimal for our needs. However, we have some indications of the direction for our next model (not 2 predictors but not all predictors) and we will use the activity to see if we can improve also by using ridge regression.
+
+#### End Recap
+
+##### ** Week 12 Activity 3: Comparing and evaluating models new models. Write the code to complete the tasks below [write code just below each instruction; for help or queries, use Teams RStudio - Forum channel] - 30 minutes**
+
+```{r}
+# Task a: Build a new recipe that use only numeric variables with strong positive correlation with sales price. Leverage the two correlation charts created in week 12 to identify them. Make sure all the independent variables are standardize. Include also Overall_Cond and Neighborhood as dummy variables. Names this recipe as example_recipe3.
+# Define recipe 3
+example_recipe3 <- recipe(price_log ~ total_sf + total_bath + garage_cars + garage_area +year_built +year_remod_add, data = ames_train) |> #what if you add also  neighborhood+ overall_cond? try it to practice more
+  step_normalize(all_numeric_predictors()) 
+# Review the recipe steps
+example_recipe3
+# Task b: Define a new ridge regression model using parsnip. Name the model as linear_mod_ridge. Make sure to use the right arguments to perform ridge regression.
+# Ridge regularized linear regression with glmnet
+linear_mod_ridge <- linear_reg(penalty = 0.1, mixture = 0) |>
+  set_engine("glmnet") |>
+  set_mode("regression")
+
+# Task c: Create 5 new workflows: 1) linear regression model with recipe 3 (recipe3_workflow_reg); 2) lasso regression model with recipe 3 (recipe3_workflow_lasso); 3) ridge regression model with recipe 1 (recipe1_workflow_ridge); 4) ridge regression model with recipe 2 (recipe2_workflow_ridge); 5) ridge regression model with recipe 3 (recipe3_workflow_ridge).
+
+recipe3_workflow_reg <- workflow() |>
+  add_recipe(example_recipe3) |>
+  add_model(linear_mod_reg) |>
+  fit(data = ames_train)#we create and fit the workflow on just the train set
+recipe3_workflow_reg |> print() |> tidy()#check model results
+
+recipe3_workflow_lasso <- workflow() |>
+  add_recipe(example_recipe3) |>
+  add_model(linear_mod_lasso) |>
+  fit(data = ames_train)#we create and fit the workflow on just the train set
+recipe3_workflow_lasso |> print() |> tidy()#check model results
+
+recipe1_workflow_ridge <- workflow() |>
+  add_recipe(example_recipe1) |>
+  add_model(linear_mod_ridge) |>
+  fit(data = ames_train)#we create and fit the workflow on just the train set
+recipe1_workflow_ridge |> print() |> tidy()#check model results
+
+recipe2_workflow_ridge <- workflow() |>
+  add_recipe(example_recipe2) |>
+  add_model(linear_mod_ridge) |>
+  fit(data = ames_train)#we create and fit the workflow on just the train set
+recipe2_workflow_ridge |> print() |> tidy()#check model results
+
+recipe3_workflow_ridge <- workflow() |>
+  add_recipe(example_recipe3) |>
+  add_model(linear_mod_ridge) |>
+  fit(data = ames_train)#we create and fit the workflow on just the train set
+recipe3_workflow_ridge |> print() |> tidy()#check model results
+
+# Task d: Make predictions using the 5 new workflows. Call the prediction as recipe3_predictions_reg, recipe3_predictions_lasso, recipe1_predictions_ridge, recipe2_predictions_ridge, recipe3_predictions_ridge.
+
+recipe3_predictions_reg <- predict(recipe3_workflow_reg, new_data = ames_test) |> 
+  bind_cols(ames_test) |> # add original columns
+   mutate(pred = 10^.pred)  # Inverse of log10, easier to interpret the prediction now that are not in a log10 form
+# the warning indicates rank deficiency with our model.
+recipe3_predictions_reg |> 
+  select(sale_price, pred) |> view()#check the prediction on test data against actual value (truth)
+
+    
+# Making predictions for the lasso models workflows
+recipe3_predictions_lasso <- predict(recipe3_workflow_lasso, new_data = ames_test) |> 
+  bind_cols(ames_test) |> # add original columns
+   mutate(pred = 10^.pred)  # Inverse of log10, easier to interpret the prediction now that are not in a log10 form
+recipe3_predictions_lasso |> 
+  select(sale_price, pred) |> view()#check the prediction on test data against actual value (truth)
+
+recipe1_predictions_ridge <- predict(recipe1_workflow_ridge, new_data = ames_test) |> 
+  bind_cols(ames_test) |> # add original columns
+   mutate(pred = 10^.pred)  # Inverse of log10, easier to interpret the prediction now that are not in a log10 form
+recipe1_predictions_ridge |> 
+  select(sale_price, pred) |> view()#check the prediction on test data against actual value (truth)
+
+recipe2_predictions_ridge <- predict(recipe2_workflow_ridge, new_data = ames_test) |> 
+  bind_cols(ames_test) |> # add original columns
+   mutate(pred = 10^.pred)  # Inverse of log10, easier to interpret the prediction now that are not in a log10 form
+recipe2_predictions_ridge |> 
+  select(sale_price, pred) |> view()#check the prediction on test data against actual value (truth)
+
+recipe3_predictions_ridge <- predict(recipe3_workflow_ridge, new_data = ames_test) |> 
+  bind_cols(ames_test) |> # add original columns
+   mutate(pred = 10^.pred)  # Inverse of log10, easier to interpret the prediction now that are not in a log10 form
+recipe3_predictions_ridge |> 
+  select(sale_price, pred) |> view()#check the prediction on test data against actual value (truth)
+
+
+# Task e: Calculate for each one of the above RMSE, MAE and  R-squared. Use similar naming convention used in the example above. Make sure to put the metrics in a new tibble. Make sure the tibble also contains the previous models results. Compare the results with the old ones. Which one is the best model in making predictions?  
+model_reg3 <- recipe3_predictions_reg |> 
+  metrics(truth = sale_price, estimate = pred) |> 
+  mutate(model="reg_model_recipe3")
+model_reg3  
+
+model_lasso3 <- recipe3_predictions_lasso |> 
+  metrics(truth = sale_price, estimate = pred) |> 
+  mutate(model="lasso_model_recipe3")
+model_lasso3 
+
+model_ridge1 <- recipe1_predictions_ridge |> 
+  metrics(truth = sale_price, estimate = pred) |> 
+  mutate(model="ridge_model_recipe1")
+model_ridge1  
+
+model_ridge2 <- recipe2_predictions_ridge |> 
+  metrics(truth = sale_price, estimate = pred) |> 
+  mutate(model="ridge_model_recipe2")
+model_ridge2 
+
+model_ridge3 <- recipe3_predictions_ridge |> 
+  metrics(truth = sale_price, estimate = pred) |> 
+  mutate(model="ridge_model_recipe3")
+model_ridge3  
+ 
+
+
+all_models_metrics <- bind_rows(model_reg1, model_reg2, model_reg3,model_lasso1, model_lasso2, model_lasso3,model_ridge1, model_ridge2,model_ridge3) #bringing all model together
+
+all_models_metrics |> arrange(.metric, .estimate) |> print(n= 27)#sort them to identify the best models --> rmse the smaller the better; mae the smaller the better; rsq the bigger the better. 
+```
+
+#### Visualizing Results
+
+Finally, visualizing the prediction results can also provide intuitive insights into model performance. You might plot the predicted vs. actual values or the residuals to visually assess how well the model is capturing the underlying relationship in the data.
+
+```{r}
+# Creating the scatter plot for the "Optimal" model
+ggplot(data= recipe3_predictions_reg, mapping= aes(x = sale_price, y = pred)) +
+  geom_point(alpha = 0.4, color= "gold") +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "gold4") +
+  labs(x = "Actual Values", y = "Predicted Values", title = "Optimal Model Predicted vs. Actual Values")+
+  scale_x_continuous(labels = label_comma()) +  # Adjust X-axis labels
+  scale_y_continuous(labels = label_comma())    # Adjust Y-axis labels
+
+
+```
+
+When interpreting scatter plots comparing actual values to predicted values, especially for regression models, the ideal scenario is for the points to closely align with the diagonal line. The diagonal line represents perfect prediction accuracy, where the predicted values exactly match the actual values. Here's how to interpret the charts and understand the nuances of good versus concerning patterns:
+
+#### Points Around the Diagonal
+
+-   **Interpretation:** If your linear model (lm) points are scattered around the diagonal, it suggests that the model's predictions are generally in agreement with the actual values. The closer the points are to the diagonal, the more accurate the predictions.
+
+-   **Good Chart Indicators:**
+
+  -   **Tight Cluster Around Diagonal:** Points tightly clustered around the diagonal line indicate high prediction accuracy.
+
+  -   **Even Spread Without Bias:** Points evenly spread above and below the diagonal line suggest that the model doesn't systematically overestimate or underestimate the target variable.
+
+#### Actions Based on Chart Interpretation
+
+-   **For lm with Good Alignment:** If the lm model shows points closely around the diagonal, it suggests your model is performing reasonably well. Consider if any slight biases or patterns arise. In our case the model seems to perform very well untill 250k actual price. However, past that it tends to under predict the sale price. Possible explanation are: 
+
+- Non-linear Relationships: Your model might not capture non-linear relationships between features and the target variable. Consider transforming your predictors (e.g., using polynomial features, square roots, logarithms) to better capture non-linearity.
+
+- Feature Engineering: Additional features that specifically influence higher-valued homes might be missing from your model. Think about aspects that significantly impact more expensive homes (e.g., luxury amenities, neighborhood prestige) and try to include these in your model.
+
+- Incorporate Interaction Terms: Some predictors might have different effects on the response variable at different levels of other predictors. Adding interaction terms to your model can help capture these effects and improve predictions for higher-valued homes.
+
+- Use a More Flexible Model: Our linear regression model might not be flexible enough to capture complex patterns in your data. Consider switching to more complex models that can capture non-linear relationships, such as random forests, gradient boosting, or even neural networks for deep learning approaches. These models can better adapt to varied patterns in the data.
+
+#### What about the same chart but with the best predictive model ?
+```{r}
+ggplot(recipe2_predictions_reg, aes(x = sale_price, y = pred)) +
+  geom_point(alpha = 0.4, color="darkblue") +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "blue") +
+  labs(x = "Actual Values", y = "Predicted Values", title = "Best Model Predicted vs. Actual Values")+
+  scale_x_continuous(labels = label_comma()) +  # Adjust X-axis labels
+  scale_y_continuous(labels = label_comma())    # Adjust Y-axis labels
+```
+The chart above clearly shows how that recipe 2 model better performs across the board (looks very good up to 400k). However, don't forget about the warning message received when we attempted to make predictions using that model.
+
+
+#### Now,what about the same chart but with the worst predictive model ?
+```{r}
+# what about the same chart but with the worst predictive model ?
+ggplot(recipe1_predictions_lasso, aes(x = sale_price, y = pred)) +
+  geom_point(alpha = 0.4, color= "darkred") +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "red") +
+  labs(x = "Actual Values", y = "Predicted Values", title = "Worst Model Predicted vs. Actual Values")+
+  scale_x_continuous(labels = label_comma()) +  # Adjust X-axis labels
+  scale_y_continuous(labels = label_comma())    # Adjust Y-axis labels
+```
+
+#### Steep Diagonal Line (Regularized Linear Model - glmnet)
+
+-   **Interpretation**: A steep diagonal line in your glmnet model plot suggests that the relationship between the actual and predicted values isn't proportional. While we expect a 1:1 relationship (perfect predictions) to follow a 45-degree line, a steeper or flatter line implies that the model's predictions are not scaling linearly with the actual values. This might be due to an imbalance in regularization that disproportionately impacts the predictions for different ranges of actual values.
+
+-   **Concerning Chart Indicators**: Steep Line Away from the Ideal Diagonal: A steep diagonal line suggests that the model may be overfitting to a certain range of the data or is not generalizing well across the spectrum of actual values. This could also be indicative of missing important predictors in the model or of the presence of non-linear relationships in the data that the model isn't capturing properly.
+
+-   **Actions Based on Chart Interpretation** :
+
+This pattern could suggest the need for a different approach to regularization. While glmnet uses a combination of L1 and L2 regularization (controlled by the penalty and mixture parameters), it might be necessary to fine-tune these parameters further. If the steep line persists:
+
+  -   Adjust Regularization Parameters (only advanced level): You may need to fine-tune the penalty parameter to find a better balance that allows the model to scale its predictions more accurately across all values.
+
+  -   Re-examine Feature Engineering: There might be missing variables in the model or non-linear relationships that are not being captured by the model. Consider adding polynomial features, interaction terms, or exploring different transformations.
+
+  -   Model Diagnostics: Look into residual plots and other diagnostic tools to better understand where the model is making errors and to guide further improvements.
+
+#### Visualizing the comparison in one chart
+
+When we look at the above charts, it seems clear that one of the models outperform the other. However, in situation like this it's easier to make the comparisons among them when the models are in the same plot. More specifically, two plots are beneficial to make the comparison:
+
+1.  **Overlaid Residuals Plot**: The overlaid residuals plot displays the residuals (the differences between the actual and predicted values) of the models across the range of predicted values. Here’s what to look for:
+
+[Zero Line]{.underline}: The dashed line at y = 0 represents perfect predictions where the predicted values match the actual values exactly. *Residuals above this line indicate underpredictions, and residuals below indicate overpredictions*.
+
+[Spread of Residuals]{.underline}: A tightly clustered spread of points around the zero line suggests a model with smaller errors. Wider spreads indicate larger errors. Patterns: Ideally, residuals should be randomly distributed around the zero line, with no discernible pattern. Patterns or trends might indicate systematic errors in a model.
+
+```{r}
+ggplot() +
+    geom_point(data = recipe3_predictions_reg, aes(x = pred, y = sale_price - pred, color = "Optimal Model")) +
+  geom_point(data = recipe2_predictions_reg, aes(x = pred, y = sale_price - pred, color = "Best Model"), alpha=0.4) +
+    geom_point(data = recipe1_predictions_lasso, aes(x = pred, y = sale_price - pred, color = "Worst Model")) +
+    geom_hline(yintercept = 0, linetype = "dashed") +
+    scale_color_manual(values = c("Optimal Model" = "gold", "Best Model" = "blue", "Worst Model" = "red")) +
+    labs(x = "Predicted", y = "Residuals", title = "Overlayed Residuals Plot") +
+    theme_minimal() +
+    guides(color = guide_legend(title = "Model"))+
+  scale_x_continuous(labels = label_comma()) +  # Adjust X-axis labels
+  scale_y_continuous(labels = label_comma())    # Adjust Y-axis labels
+
+```
+
+2.  **Overlaid Prediction Error Plot**: This plot shows the predicted values against the actual values for all models:
+
+[Diagonal Line]{.underline}: Represents the line of perfect prediction. The closer the points to this line, the more accurate the predictions. 
+
+[Dispersion]{.underline}: Points closely clustered around the diagonal line indicate high accuracy. If points for one model are closer to the line than another, that model has generally performed better. Bias: If points systematically deviate to one side of the line, it might indicate bias in the model predictions.
+
+
+```{r}
+ggplot() +
+    geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "black") +
+    geom_point(data = recipe3_predictions_reg, aes(x = sale_price, y = pred, color = "Optimal Model")) +
+  geom_point(data = recipe2_predictions_reg, aes(x = sale_price, y = pred, color = "Best Model")) +
+    geom_point(data = recipe1_predictions_lasso, aes(x = sale_price, y = pred, color = "Worst Model")) +
+    scale_color_manual(values = c("Optimal Model" = "gold", "Best Model"= "darkblue" ,"Worst Model" = "red")) +
+    labs(x = "Actual", y = "Predicted", title = "Overlayed Prediction Error Plot") +
+    theme_minimal() +
+    guides(color = guide_legend(title = "Model"), shape = guide_legend(title = "Model"))+
+  scale_x_continuous(labels = label_comma()) +  # Adjust X-axis labels
+  scale_y_continuous(labels = label_comma())    # Adjust Y-axis labels
+
+```
+
+Visual interpretations provide valuable insights into model performance but should be complemented with quantitative metrics (like RMSE, R²) for a comprehensive evaluation. Scatter plots help identify patterns or biases not immediately apparent from numerical metrics alone, offering a more intuitive understanding of model behavior
+
+By carefully analyzing these metrics and visualizations, you can make an informed decision about which model best meets your needs, taking into account both quantitative performance and practical considerations.
+
+
+
+##### **Activity 1: Model performance assessment, relevant metrics and visualizations. Write the code to complete the tasks below [write code just below each instruction; for help use Teams RStudio - Forum channel] - 25  minutes**
+
+```{r}
+#A step by step Linear and Ridge Regression Analysis. 
+# 1) Data Preparation: Split the ames_clean dataset into new training and testing subsets. 
+
+#2) Recipe: Target `sale_price` for prediction. Add preprocessing: Construct a recipe that creates a new feature "outdoor_living_SF" (equal to the sum of `wood_deck_sf`, `open_porch_sf`, and `enclosed_porch`). Include also `total_sf`, `overall_cond`, and `neighborhood` as predictors. Normalize all numeric predictors and create dummy variables for categorical ones (`overall_cond` and `neighborhood`).
+
+#3) Model Specification: Specify two regression models using `parsnip`: a Linear Regression model and a Ridge Regression model. 
+
+#4) Workflow Creation: Create a workflow for each model that incorporates the recipe and the model itself. Fit each workflow to the training set. 
+
+#5) Evaluation: Use the fitted workflows to predict `sale_price` on the testing set. Assess the models' performance using metrics such as RMSE, MAE and R-Squared. Which model is the most optimal model? Why?
+
+#6) Visualizing metrics: Generate a prediction error plot for each model. Differentiate the models by color, using blue for the Linear Regression model and red for the Ridge Regression model. Generate also a Overlaid Residuals Plot and an Overlaid Prediction Error Plot. What indications are you getting from the charts?
+
+```
+
+#### What Makes a Good Model (Optimal)?
+Now that we learned also how to visualize the models results it is time to summarize what makes a good model. Here are three elements you should always keep in mind before proceeding to model selection and interpretation:
+
+-   **Accuracy:**
+    -   **Essential for Trustworthy Predictions:** Accurate models closely align predictions with actual observed values, enhancing the reliability of the insights or decisions derived from the model.
+    -   **Balancing Precision and Usability:** While striving for accuracy, it's crucial to ensure the model remains applicable and interpretable within its intended context.
+-   **Generalizability:**
+    -   **Performance Across Diverse Data:** A model's ability to perform well on unseen data, not just the data it was trained on, is vital for its utility in real-world applications.
+    -   **Robustness to Overfitting:** Generalizable models resist overfitting, where a model learns the noise in the training data to the detriment of its performance on new data.
+-   **Simplicity:**
+    -   **The Principle of Occam's Razor:** When two models offer comparable performance, the simpler model is preferred. This principle, known as Occam's Razor, suggests that simpler explanations are more likely to be correct than complex ones.
+    -   **Advantages of Simplicity:** Simpler models are easier to understand, explain, and maintain. They are less likely to overfit and often require less data to train effectively.
+
+In sum, understanding the key metrics that evaluate regression models provides insights into model performance, highlighting areas of strength and opportunities for improvement. A good model balances accuracy, generalizability, and simplicity, ensuring it can reliably predict outcomes and offer valuable insights into the phenomenon being studied.
+
+### Interpreting the most optimal model results
+
+Given that recipe3 regression model gives the most optimal results we will proceed to interpret its results.
+
+#### What to Look At in the Model Output:
+
+1. **Coefficient (Estimate)**: Indicates the direction and magnitude of the relationship between each predictor and the dependent variable. Positive coefficients suggest a direct relationship, while negative coefficients suggest an inverse relationship. Positive signs indicate that as the predictor increases, the dependent variable tends to increase. The magnitude tells you how much change to expect in the dependent variable for a one-unit change in the predictor.
+
+2. **Standard Error (Std. Error)**: Measures the variability or uncertainty in the coefficient estimate. Lower values indicate more precise estimates.
+
+3. **Statistic**: This is typically the t-statistic, which tests the null hypothesis that the coefficient is equal to zero (no effect). It's calculated as the coefficient divided by its standard error. A higher absolute value of the t-statistic indeed indicates stronger evidence against the null hypothesis, which suggests that the coefficient is significantly different from zero. This means that the predictor variable is likely having a significant effect on the response variable.
+
+4. **P-value**: Assesses the evidence against the null hypothesis. Low p-values (< 0.05) indicate strong evidence against the null hypothesis, suggesting the predictor has a statistically significant relationship with the dependent variable. P-value > 0.05 indicate that the relationship is not statistically significant.
+
+```{r}
+recipe3_workflow_reg |> print() |> tidy()#check model results
+
+```
+
+#### Interpretation of Individual Predictors:
+
+Given the model formula `price_log ~ total_sf + total_bath + garage_cars + garage_area + year_built + year_remod_add` we need to take into account that our dependent variable is log transformed on base 10. Moreover, we have to consider that all the predictors are standardized (mean 0, sd 1). Thus, this is the interpretation of the regression results:
+
+1. **Total Square Footage (`total_sf`)**:
+- **Interpretation**: A one-standard-deviation increase in total square footage is associated with an approximate (10^0.0842 - 1) * 100 = 21.39%  sale price increase given all other variables constant. To complete the interpretation we need to verify the average (2546.269) and sd (804.3508) of total_sf. So, this is the full interpretation: Increasing the size of a property by around 804 square feet, from the average of 2546 square feet to about 3350 square feet, is expected to increase the sale price by approximately 21.39%. This substantial increase highlights the significant value that additional space adds to a property, making larger homes considerably more valuable on the market. The high statistical significance in terms of p-value reinforces the importance of property size.
+
+2. **Total Bathrooms (`total_bath`)**:
+   - **Interpretation**: A one-standard-deviation increase in total bathroom is associated with an approximate (10^0.0205 - 1)*100 = 4.83% sale price increase given all other variables constant. The statistical significance of this variable confirms the added value of bathrooms to a home's market price.
+
+3. **Garage Cars Capacity (`garage_cars`)**:
+   - **Interpretation**: A one-standard-deviation increase in car capacity in the garage is related to an approximate  increase in the property's price of (10^0.0280 - 1)*100 = 6.659%. This finding, backed by a significant p-value, highlights the value attributed to garage capacity.
+
+4. **Garage Area (`garage_area`)**:
+   - **Interpretation**: A one-standard-deviation increase in square foot in garage area on property price is smaller and not statistically significant at the 5% p-value level (p = 0.0825), suggesting that while there might be a slight positive relationship, it's not as robust or consistent as other factors. For this reason it is not necessary to further interpret it.
+
+5. **Year Built (`year_built`)**:
+   - **Interpretation**: A one-standard-deviation increase in year of construction is associated with an approximate increase in price (10^0.0299 - 1)*100 = 7.127%). This significant relationship underscores the premium on newer constructions and their appeal in the housing market.
+
+6. **Year of Last Remodel/Addition (`year_remod_add`)**:
+   - **Interpretation**: A one-standard-deviation increase in recent updates (remodel/addition) is associated with an approximate increase in price of (10^ 0.0327 -1)*100 =  7.82%. The statistical significance of this predictor emphasizes the importance of keeping properties updated.
+
+##### **Activity 2: Results interpretation. Write the code to complete the tasks below  but focus mostly on the variables interpretation [write code just below each instruction; for help use Teams RStudio - Forum channel] - 15 minutes**
+
+```{r}
+#Remember to interpret them as a 1 standard deviation increase from the average value.
+# a) Finish the interpretation of the Total Bathrooms (`total_bath`) variable. Compute its average and sd to offer a more comprehensive and actionable interpretation. Hint: use the total_sf interpretation as a guideline
+#average total_bath= 2.44--> 2 and half
+#sd total_bath= 0.941 --> 1 more bath
+#4.83% sale increase in percentage
+#b) Finish the interpretation of the Total Bathrooms (`total_bath`) variable. Compute its average and sd to offer a more comprehensive and actionable interpretation. Hint: use the total_sf interpretation as a guideline
+
+#c) Finish the interpretation of the Garage Cars Capacity (`garage_cars`) variable. Compute its average and sd to offer a more comprehensive and actionable interpretation. Hint: use the total_sf interpretation as a guideline
+
+#d) Finish the interpretation of the Year Built (`year_built`) variable. Compute its average and sd to offer a more comprehensive and actionable interpretation. Hint: use the total_sf interpretation as a guideline
+
+#e) Finish the interpretation of the Last Remodel/Addition (`year_remod_add`) variable. Compute its average and sd to offer a more comprehensive and actionable interpretation. Hint: use the total_sf interpretation as a guideline
+
+```
+
+### Summary
+
+When you interpret the results you have to account for the transformations applied to the dependent variable (e.g., log transformation) and predictors (e.g. standardization). Failing to do so will lead to misleading insights. Moreover, pay attention to the type of variables (e.g., interval vs dummy) and type of model. Once you have assessed model prediction performance and interpreted the results, the final step is to use it to make predictions on data that do not contain your dependent variable value (e.g., imagine that you are a real estate agent and you want to forecast the price of the houses not yet on the market or create comps with houses not yet on the market). 
+
+
+### Making forecast by leveraging the optimal model
+
+However, before we do that it is probably a good idea to save your optimal tidymodels pipeline. In the context of using the `tidymodels` framework for your modeling process, your `final_model` should be the entire workflow that you've created, fitted, and evaluated. This workflow includes both the preprocessing steps (defined in your recipe) and the model specification, along with its fitted parameters on the training data. Here's a breakdown of what's being saved and why:
+
+#### What to Save as `final_model`:
+
+- **The Fitted Workflow (`recipe3_workflow_reg`)**: This is the object you've created that encapsulates:
+  - The preprocessing recipe (`example_recipe3`), which defines how your data should be processed before modeling. This might include scaling, centering, encoding categorical variables, imputing missing values, etc.
+  - The model specification (`linear_mod_reg`), which defines the type of model you're using (in this case, a linear regression model) and its configuration.
+  - The fitted model parameters, which are the result of training (fitting) this model on your training dataset (`ames_train`).
+
+### Why Save the Entire Workflow:
+
+- **Consistency in Preprocessing**: Saving the workflow pipeline ensures that any future data you wish to predict on undergoes the exact same preprocessing steps as your training data. This is crucial for the reliability of your predictions.
+- **Ease of Use**: When you want to make predictions on new data, having the preprocessing and model encapsulated in a single object means you only need to deal with one object, rather than separately managing preprocessing steps and the model.
+- **Reproducibility**: Saving the fitted workflow as your `final_model` ensures that you can reproduce your modeling process exactly, from preprocessing through to prediction. This is vital for verifying your results and for any future analysis.
+
+### Saving the Workflow:
+
+To save your `final_model` (in this case, the fitted workflow `recipe1_workflow_reg`), you would typically use the `saveRDS()` function in R:
+
+```{r}
+saveRDS(recipe3_workflow_reg, "final_ames_model.rds")
+```
+
+And when you're ready to use this model in the future, you can load it with `readRDS()` and immediately start making predictions on new data:
+
+```{r}
+final_model <- readRDS("final_ames_model.rds")# to load it and use it in future sessions.
+new_ames_data <-  readr::read_csv("new_ames_data.csv")# importing a dataset of houses without price in R.
+new_predictions <- predict(final_model, new_data = new_ames_data)|> 
+   mutate(pred = 10^.pred)# making the predictions on these new houses 
+```
+
+This process streamlines the application of your model to new datasets and ensures that all aspects of your model—preprocessing through prediction—are consistent and reproducible. Here's a simplified overview of the process:
+
+1. **Preparing `new_ames_data`**: When you collect or prepare new data for prediction, it should include all the features used during the training of your model but exclude the target variable (`sale_price` in the Ames dataset context). This ensures that your model, which has learned the relationship between the features and the target variable during training, can now apply this knowledge to estimate the target for new, unseen data.
+
+2. **Applying the Workflow**: Your saved workflow, when applied to `new_ames_data`, performs the necessary preprocessing steps defined in your `recipe` (e.g., scaling, encoding categorical variables) on the new data. Since these steps were calibrated on your training data, they prepare `new_ames_data` in a way that's consistent with the training process.
+
+3. **Making Predictions**: With the preprocessed features, your model then predicts the target variable for each observation in `new_ames_data`. These predictions are the model's estimates of what the sale prices would be, based on the relationships it learned during training.
+
+4. **Using Predictions**: The output you get can be used in various ways depending on your project's goals—whether it's setting listing prices, identifying under- or overvalued properties, or further analysis and insights generation.
+
+We have now completed a full modeling analysis and applied the model to forecast future houses prices. Mastering modeling skills takes time and a lot of trials and error. That is why you should never use the first model build to make predictions about the future. Nonetheless, now you have the tools to evaluate different models and to interpret their results. Those will prove useful when you move into the professional world.
+
+
+#### Appendix A: Dummy variables interpretation
+Interpreting the coefficients of dummy variables in a regression model involves comparing each category's impact relative to a reference category. Let's use an example where the coefficients for overall_cond (Overall Condition) categories are differences in the log-transformed sale_price compared to the reference category (often the category omitted in the regression output, possibly "Poor" in some analyses or another category depending on how the variables were coded). Assuming the dependent variable is log-transformed using base 10, the coefficients represent the percentage change in sale price associated with each condition category relative to the reference category. So, if the Overall Condition "Poor" coefficient is - 0.055: Homes in "Poor" condition are associated with a -5.50% change in sale price compared to the reference category. This suggests that being in "Poor" condition reduces the sale price by about 5.5% compared to the baseline condition. In tidymodels with R, when you're working with categorical variables and creating dummy variables as part of your modeling process, the reference (or baseline) category is determined by the factor levels of the categorical variable. By default, R uses the first level as the baseline when it converts factors into dummy variables for regression analysis. So, this interpretation assumes that "Very_Poor" condition is the reference or baseline category (the category against which all others are compared). If another category is the baseline, adjustments in interpretation would be necessary based on that category's relation to others.
+
+
+#### Appendix B: Interpreting Ridge and Lasso Regression Results
+
+The interpretation of results from Ridge and Lasso regression analyses involves understanding the impact of regularization on the coefficients and how these coefficients describe the relationship between predictors and the response variable.
+
+##### Ridge Regression Interpretation
+Ridge regression applies an L2 penalty to the coefficients, shrinking them towards zero but not setting any to exactly zero. The key aspects to interpret in Ridge regression results are:
+
+- Coefficient Size: The magnitude of the coefficients indicates the relative importance of each predictor in relation to the sale price. However, due to the penalty applied, these values are generally smaller than those you might find in an ordinary least squares (OLS) regression. This shrinkage helps mitigate the risk of overfitting, particularly in situations with many correlated predictors.
+
+- Significance: Unlike Lasso, Ridge does not perform feature selection. All predictors remain in the model but with reduced coefficients. The t-statistics and associated p-values can still help determine the significance of predictors, but the primary focus is often on the magnitude and direction of the coefficients.
+
+##### Lasso Regression Interpretation
+Lasso regression incorporates an L1 penalty, which can shrink some coefficients to exactly zero, effectively performing feature selection by excluding these predictors from the model. This characteristic of Lasso is crucial for interpretation:
+
+- Zero vs. Non-Zero Coefficients: Non-zero coefficients indicate predictors that Lasso has identified as having a significant relationship with the sale_price. Predictors with coefficients shrunk to zero are deemed not to contribute to the model within the regularization strength used.
+
+- Coefficient Magnitude and Direction: For non-zero coefficients, their magnitude offers insight into the strength of each predictor's relationship with the sale price, while the sign (positive or negative) indicates the direction of this relationship. Given the log-transformed outcome, these coefficients can be translated into percentage changes in sale price for easier interpretation.
+
+Conclusion
+When interpreting Ridge and Lasso regression results, focus on the magnitude, direction, and presence (or absence) of coefficients to understand the relationship between predictors and the response variable. Lasso's ability to perform feature selection adds an additional layer of interpretation, identifying which predictors are most relevant. Both methods offer robust approaches to understanding complex datasets, especially when predictors are numerous or highly correlated.
+
+

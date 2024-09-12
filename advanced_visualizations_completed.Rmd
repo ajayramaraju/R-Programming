@@ -1,0 +1,442 @@
+---
+title: "Week 7 materials"
+author: "Biagio Palese"
+date: "`r format(Sys.time(), '%d %B, %Y')`" 
+output: 
+  html_document:
+    
+    theme: flatly
+    toc: TRUE
+    toc_float: TRUE
+    code_download: TRUE
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE, cache = F}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  error = TRUE,
+  warning= FALSE,
+  message= FALSE)
+```
+
+## Advanced Visualizations
+
+The following sections of our book R for Data Science( [first portion of the course book](https://r4ds.hadley.nz) ) are included in the second week:
+
+- [Data Visualization](https://r4ds.hadley.nz/data-visualize)
+
+
+### Link to other resources
+
+- Internal help: 
+ [posit support](https://support.posit.co/hc/en-us) 
+
+- External help: [stackoverflow](https://stackoverflow.com/search?q=rstudio&s=25d8522e-3191-4bf2-ae3b-ccad762aeca9)
+
+- Additional materials: [posit resources](https://posit.co/resources/)
+
+- Cheat Sheets: [posit cheat sheets](https://posit.co/resources/cheatsheets/)
+
+While I use the book as a reference the materials provided to you are custom made and include more activities and resources. If you understand the materials covered in this document there is no need to refer to other sources. If you have any troubles with the materials don't hesitate to contact me or check the above sources.
+
+
+
+### Data visualization Review
+We will focus on ggplot2 package, one of the core members of the tidyverse.
+
+### Load packages
+```{r}
+library(tidyverse)
+```
+
+![Data Science model: Artwork by @allison_horst ](environmental-data-science-r4ds-general.png)
+
+## Recap
+### Creating charts with ggplot
+With ggplot2, you begin a plot with the function ggplot(). ggplot() creates a coordinate system that you can add layers to. The first argument of ggplot() is the dataset to use in the graph. So ggplot(data = mpg) creates an empty graph of the mpg dataset.
+```{r}
+ggplot(data = <DATA>) + 
+  <GEOM_FUNCTION>(mapping = aes(<MAPPINGS>))
+```
+You complete your graph by adding one or more layers to ggplot(). For example, the function geom_point() adds a layer of points to your plot, which creates a scatterplot. ggplot2 comes with many geom functions that each add a different type of layer to a plot. 
+
+#### Some examples
+```{r}
+#What is the first step when you start working with a new dataset?
+mpg#displ, a car’s engine size, in liters.hwy, a car’s fuel efficiency on the highway, in miles per gallon (mpg)
+?mpg
+ggplot(data = mpg) + 
+  geom_bar(mapping = aes(x = cty))#this chart shows the distribution of city fuel consumption  among the cars in this dataset
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = class, y = hwy))#this chart shows the relation between vehicle class and highway fuel efficiency. Any surprise? Bigger cars seem to use more fuel.
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = hwy , y = class))# By changing axis you change the layout of the chart. Results stay the same of course
+```
+
+Each geom function in ggplot2 takes a mapping argument. This defines how variables in your dataset are mapped to visual properties. The mapping argument is always paired with aes() [aesthetic], and the x and y arguments of aes() specify which variables to map to the x and y axes. ggplot2 looks for the mapped variables in the data argument, in this case, mpg.
+Let's learn how to complete and extend this template to make different types of graphs. We will begin with the <MAPPINGS> component.
+
+### Aesthetic mappings
+You can add a third variable, like class, to a two dimensional scatterplot by mapping it to an aesthetic. An aesthetic is a visual property of the objects in your plot. Aesthetics include things like the size, the shape, transparency or the color of your points. You can display a point (like the one below) in different ways by changing the values of its aesthetic properties. You can convey information about your data by mapping the aesthetics in your plot to the variables in your dataset. For example, you can map the colors of your points to the class variable to reveal the class of each car.
+
+```{r}
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy, color = class))#The colors reveal the impact of the cars class in the relationship between engine size and high way consumption
+```
+
+So, to map an aesthetic to a variable, associate the name of the aesthetic to the name of the variable inside aes(). ggplot2 will automatically assign a unique level of the aesthetic (here a unique color) to each unique value of the variable, a process known as scaling. ggplot2 will also add a legend that explains which levels correspond to which values.
+
+#### More examples
+```{r}
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy, size = class))#The size reveal the impact of the cars class in the relationship between engine size and high way consumption but remember that using size for a discrete variable is not advised-->warning because mapping an unordered variable (class) to an ordered aesthetic (size) is not a good idea.
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy, size = cyl))#The size reveal the impact of the cars cylinders in the relationship between engine size and high way consumption
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy, alpha = cyl))##The transparency of the points reveal the impact of the cars cylinders in the relationship between engine size and high way consumption. Same as above not recommended for discrete variables.
+
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy, shape = cyl))# Shape only accept discrete variables --> Error: A continuous variable can not be mapped to shape
+
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy, shape = class))#What happened to the SUVs? ggplot2 will only use six shapes at a time. By default, additional groups will not be plotted when you use the shape aesthetic.
+
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy, shape = drv, color=drv))#Instead this aestethic works very well with the drive mode of the car because there are only three different type of drive mode
+```
+
+### End of the review
+
+### Static mapping
+So far we have seen that once you map an aesthetic, ggplot2 takes care of the rest. It selects a reasonable scale to use with the aesthetic, and it constructs a legend that explains the mapping between levels and values. For x and y aesthetics, ggplot2 does not create a legend, but it creates an axis line with tick marks and a label. The axis line acts as a legend; it explains the mapping between locations and values. However, what if I want to manually change the layout of my chart? Can I do that?
+```{r}
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy), color = "lightblue", size= 4, shape= 4)#The y (hwy) maps value available in the hwy column; viceversa the x maps to the displ column values. All the aesthetics are mapped manually.
+```
+In the chart above  the color doesn’t convey information about a variable, but only changes the appearance of the plot. To set an aesthetic manually, set the aesthetic by name as an argument of your geom function; i.e. it goes outside of aes(). You’ll need to pick a level that makes sense for that aesthetic:
+
+The name of a color as a character string ("blue").
+
+The size of a point in mm (2).
+
+The shape of a point as a number (18), as shown in Figure 3.1. of the book.
+
+![Figure 1](static_shapes.png)
+#### Activity 1 (a & b in class c & d at home): Charts with static mapping. Write the code to solve the below tasks [write code just below each instruction, finally  use Teams RStudio - Forum channel for help or if you have other questions]  - 5 minutes
+
+```{r}
+# a. Create a bar chart that show the engine size distribution on the y axis and use different shape for each car class. Make sure the color of the bar is red.
+ggplot(data = mpg)+
+  geom_bar(mapping = aes(y=displ, fill=class), fill="red")
+# b. Create a scatterplot between the city fuel efficiency (y) and number of cylinders (x) assign a different size to each class. Make sure that the points color is blue and the shape of the points is 2.
+ggplot(data = mpg)+
+  
+# c. Create a scatterplot between the highway fuel efficiency (y) and number of cylinders (x) assign a different color to each manufacturer. Make sure the size of each point is equal to 3 and the shape is 0.
+
+# d.  Create a scatterplot between the city fuel efficiency (y) and number of cylinders (x) assign a different shape to each manufacturer. Make sure the color of each shape is green and size is 4.
+```
+
+
+### Facets
+One way to add additional variables is with aesthetics. Another way, particularly useful for categorical variables, is to split your plot into facets, subplots that each display one subset of the data.
+
+To facet your plot by a single variable, use *facet_wrap()*.  The variable that you pass to facet_wrap() should be discrete.
+```{r}
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy)) + 
+  facet_wrap(vars(class), nrow = 2)#we show how the relationship investigated above holds among different classes of cars.
+
+#or
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy)) + 
+  facet_wrap(~class, nrow = 2)#The formula simply divide the original chart in as many type of car classes are available in your dataset
+```
+
+#### Activity 2 (a & b in class c & d at home): Charts with facet_wrap. Write the code to solve the below tasks[write code just below each instruction, finally  use Teams RStudio - Forum channel for help or if you have other questions]  - 5 minutes
+```{r}
+#a. Create a scatterplot between the city fuel efficiency (y) and number of cylinders (x) assign a different color to each drv. Make sure to facet by class.
+ggplot(data = mpg)+
+  geom_point(mapping=aes(y=cty, x=cyl, color=drv))+
+  facet_wrap(vars(class))
+
+ggplot(data = mpg)+
+  geom_point(mapping=aes(y=cty, x=cyl, color=drv))+
+  facet_wrap(~class)  
+#b. Create a bar plot of the manufacturers (x) assign a different color to each drv. Make sure to facet by cyl.
+ggplot(data = mpg)+
+  geom_bar(mapping =aes(y=manufacturer, fill=drv) )+
+  facet_wrap(~cyl)
+  
+  
+#c. Create a scatterplot between the highway fuel efficiency (y) and engine size (x) assign a different color to each cyl. Make sure to facet by drv.
+
+#d. Create a boxplot of the city fuel efficiency (y) and cyl (x) assign a different color to each class. Make sure to facet by engine size.
+```
+
+To facet your plot on the combination of two variables, add *facet_grid()* to your plot call. 
+```{r}
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy)) + 
+  facet_grid(vars(drv), vars(cyl))# This time you are faceting on two variables. What do you notice? There are some combinations of values that do not have data points in your dataset. For example 5 cyl and all wheel drive. This gives you also an indication of the most common configurations of car based on cyl and drive mode and how they behave in terms of consumption. 4 cyl, front wheel drive seems to have the  best high way gas mileage.
+
+#or
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy, color=class)) + 
+  facet_grid(cyl ~ drv)#The first argument of facet_grid() is also a formula. This time the formula should contain two variable names separated by a ~
+```
+
+#### Activity 3 (a & b in class c & d at home): Charts with facet_grid. Write the code to solve the below tasks [write code just below each instruction, finally  use Teams RStudio - Forum channel for help or if you have other questions]  - 5 minutes
+
+```{r}
+# a. Create a bar chart that show the engine size distribution on the y axis. Make sure to facet by class and drv. 
+ggplot(data = mpg)+
+  geom_bar(mapping = aes(y=displ))+
+  facet_grid(class~drv)
+  
+# b. Create a scatterplot between the city fuel efficiency (y) and number of cylinders (x) assign a different transparency to each drv. Make sure to facet by manufacturer and engine size. 
+ggplot(data = mpg)+
+  geom_point(mapping = aes(y=cty, x=cyl, alpha=drv))+
+  facet_grid(manufacturer~displ)
+#c. Create a scatterplot between the highway fuel efficiency (x) and manufacturer (y) assign a different size to each cyl. Make sure to facet by trans and drv. 
+
+#d. Create a boxplot of the city fuel efficiency (y) and engine size (x) assign a different color to each drv Make sure to facet by manufacturer and trans.
+
+```
+
+
+### Geometric objects
+A geom is the geometrical object that a plot uses to represent data. People often describe plots by the type of geom that the plot uses. For example, bar charts use bar geoms, line charts use line geoms, boxplots use boxplot geoms, and so on. Scatterplots break the trend; they use the point geom. 
+To change the geom in your plot, change the geom function that you add to ggplot()
+```{r}
+# Chart using the point geom
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy))
+
+```
+
+```{r}
+# Same chart using the smooth geom, a smooth line fitted to the data
+ggplot(data = mpg) + 
+  geom_smooth(mapping = aes(x = displ, y = hwy))
+```
+
+Be careful: Every geom function in ggplot2 takes a mapping argument. However, not every aesthetic works with every geom. For example: you could set the shape of a point, but you couldn’t set the “shape” of a line. On the other hand, you could set the linetype of a line and not of a point. geom_smooth() will draw a different line, with a different linetype, for each unique value of the variable that you map to linetype.
+```{r}
+ggplot(data = mpg) + 
+  geom_smooth(mapping = aes(x = displ, y = hwy, linetype = drv, color=drv))#Here geom_smooth() separates the cars into three lines based on their drv value, which describes a car’s drive train. This way you can see how the drive train impact the relationship between hwy and engine size. Remember, 4 stands for four-wheel drive, f for front-wheel drive, and r for rear-wheel drive
+ggplot(data = mpg) + 
+  geom_smooth(mapping = aes(x = displ, y = hwy, shape = drv))# Notice the warning and that the shape of the line doesn't change but it still distinguish 3 separate line. The problem is that you can't determine which one is which.
+```
+#### Activity 4 (a & b in class c & d at home): Charts with different geom/aes. Write the code to solve the below tasks [write code just below each instruction, finally  use Teams RStudio - Forum channel for help or if you have other questions]  - 5 minutes
+```{r}
+# a. Create a smoothing line plot between the hwy (y) and engine size(x) assign a different  color to the drive mode (drv). 
+
+# b. Create a scatterplot plot between the cty (y) and engine size(x) assign a different linetype to the drive mode (drv).
+
+# c. Create a bar plot of the manufacturer variable assign a different shape to each class. 
+
+# d. Create a boxplot between the hwy (y) and cyl (x) assign a different linetype to the trans variable. 
+
+```
+
+*Stopped Here*
+
+Again, ggplot2 provides over 40 geoms, and extension packages provide even more [ggplot extensions](https://exts.ggplot2.tidyverse.org/). The best way to get a comprehensive overview is the ggplot2 cheatsheet, which you can find at [cheat sheets](http://rstudio.com/cheatsheets). 
+
+To learn more about any single geom, use help: ?geom_smooth
+Practice more with geom_smooth
+
+#### Homework 1: Charts with geom_smooth. Write the code to solve the below tasks [write code just below each instuction, finally  use Teams RStudio - Forum channel for help on the homework or if you have other questions]
+```{r}
+# a. Plot the relationship between hwy and displ. Divide the lines based on the car class. Use a different color for each class 
+
+# b. Plot the relationship between cty and cyl. Divide the lines based on the car drv.
+
+# c. Plot the relationship between hwy and drv. Divide the lines based on the car manufacturer. Use a different color for each manufacturer. 
+
+# d. Plot the relationship between cty and displ. Divide the lines based on the car trans.
+
+```
+
+### Multiple geom on the same chart
+To display multiple geoms in the same plot, add multiple geom functions to ggplot(), you just need to add one more layer to your plot:
+```{r}
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy)) +
+  geom_smooth(mapping = aes(x = displ, y = hwy))
+```
+
+This, however, introduces some duplication in our code. Imagine if you wanted to change the y-axis to display cty instead of hwy. You’d need to change the variable in two places, and you might forget to update one. You can avoid this type of repetition by passing a set of mappings to ggplot(). ggplot2 will treat these mappings as global mappings that apply to each geom in the graph. In other words, this code will produce the same plot as the previous code:
+```{r}
+ggplot(data = mpg, mapping = aes(x = displ, y = hwy)) + 
+  geom_point() + 
+  geom_smooth()
+
+
+```
+#### Activity 5 (a & b in class c & d at home): Charts with multiple geoms. Write the code to solve the below tasks [write code just below each instruction, finally  use Teams RStudio - Forum channel for help or if you have other questions]  - 5 minutes
+```{r}
+# a. Plot the relationship between cyl and hwy with both points and a line. 
+ggplot(data = mpg, mapping = aes(x=cyl, y=hwy))+
+  geom_point()+
+  geom_smooth()
+# b. Plot the relationship between engine size and cty with both points and a line. Do not replicate the mapping.
+ggplot(data = mpg, mapping = aes(x=cty, y= displ))+
+  geom_point()+
+  geom_smooth()
+
+  
+# c. Plot the relationship between cyl and engine size with both points and a line. 
+
+# d. Plot the relationship between cyl and cty with both points and line. Do not replicate the mapping.
+
+```
+
+If you place mappings in a geom function, ggplot2 will treat them as local mappings for the layer. It will use these mappings to extend or overwrite the global mappings for that layer only. This makes it possible to display different aesthetics in different layers.
+```{r}
+ggplot(data = mpg, mapping = aes(x = displ, y = hwy)) + 
+  geom_point(mapping = aes(color = class)) + 
+  geom_smooth()# the color applies only to the points because it is specified in that geom. While the other aesthetics apply to both because they are specified in the global settings of the chart.
+```
+
+#### Activity 6 (a & b in class c & d at home): Charts with local vs global mapping. Write the code to solve the below tasks [write code just below each instruction, finally  use Teams RStudio - Forum channel for help or if you have other questions]  - 5 minutes
+```{r}
+# a. Plot the relationship between engine size and cty with both points and a line. Do not replicate the mapping. Make sure to assign a different transparency to the points based on the number of cylinders.
+ggplot(data=mpg, mapping = aes(x=displ, y=cty))+
+  geom_point(mapping = aes(alpha=cyl))+
+  geom_smooth(color="pink")
+# b. Plot the relationship between cyl and hwy with both points and a line. Do not replicate the mapping. Make sure to assign a different color to the points based on the car class.
+ggplot(data=mpg, mapping = aes(x=cyl, y=hwy))+
+  geom_point(mapping = aes(color=class))+
+  geom_smooth()
+# c. Plot the relationship between engine size and hwy with both points and a line. Do not replicate the mapping. Make sure to assign a different color to the lines based on the drv.
+
+# d. Plot the relationship between manufacturer and cty with both points and a line. Do not replicate the mapping. Make sure to assign a different size to the points based on the number of cylinders.
+
+```
+
+As you can see we are increasing the complexity of the chart and leveraging what we have learned so far to provide more information from your chart. Now, you can also use the same idea to specify different data for each layer. Here, our smooth line displays just a subset of the mpg dataset, the subcompact cars. The local data argument in geom_smooth() overrides the global data argument in ggplot() for that layer only.
+```{r}
+ggplot(data = mpg, mapping = aes(x = displ, y = hwy)) + 
+  geom_point(mapping = aes(color = class)) + 
+  geom_smooth(data = filter(mpg, class == "subcompact"), se = FALSE)+
+  geom_smooth(data= filter(mpg, class!= "subcompact"), color= "pink")# just keep in mind that we are basically filtering only the subcompact cars to draw the line. This can be extremely powerful if you want to show how they perform compared to all the others.
+
+
+```
+#### Activity 7 (a & b in class c & d at home): Advanced charts. Write the code to solve the below tasks [write code just below each instruction, finally  use Teams RStudio - Forum channel for help or if you have other questions]  - 5 minutes
+```{r}
+# a. Plot the relationship between engine size and hwy with both points and a line. Do not replicate the mapping. Make sure to show the points only for the toyota cars. Moreover, show a different line color for the car cyl.
+ggplot(data = mpg, mapping = aes(x=displ, y=hwy))+
+  geom_point(data= filter(mpg, manufacturer=="toyota"))+
+  geom_smooth(mapping = aes(color=as_factor(cyl)))
+# b. Plot the relationship between cyl and cty with both points and a line. Do not replicate the mapping. Make sure to assign a different color to the points based on car drv. Moreover, show a line only for the suv and a separate line for all the car classes. Make sure to set se=TRUE.
+ggplot(data = mpg, mapping = aes(x= cyl, y=cty))+
+  geom_point(mapping = aes(color=drv))+
+  geom_smooth(data=filter(mpg, class =="suv"))+
+  geom_smooth(color="black")
+# c. Plot the relationship between engine size and cty with both points and a line. Do not replicate the mapping. Make sure to assign a different color to the points based on car cyl. Moreover, show a line only for the front wheel drive cars. Make sure to set se=FALSE.
+
+# d. Plot the relationship between engine size and hwy with both points and a line. Do not replicate the mapping. Make sure to show the points only for the pickup cars. Moreover, show a different line type for each cyl.
+
+```
+
+#### Homework 2: Now we have learned how to visualize the mpg dataset but can you apply what learned to the "diamonds" dataset?
+```{r}
+# Create 4 advanced charts of your choice by trying to apply all that we learned on visualizations. You must use the diamonds dataset. Paste the code in the homework 2 file available in the week 6 activities folder.
+
+```
+
+## Completing the chart
+The charts we have created so far are definitely insightful and useful. However, they are missing some important final touches. Details can make a difference so now we will learn how to add them. The good news is that also in this case, adding them means adding a layer to our chart.
+
+### Change the axis name and add a chart title
+In some scenario axis name equal to column names is enough. However, we can enhance the chart by making the axis name more intelligible for people that are not expert of cars. Finally, the title can help in explaining the chart purpose.
+
+```{r}
+ggplot(data = mpg, mapping = aes(x = displ, y = hwy)) + 
+  geom_point(mapping = aes(color = class)) + 
+  geom_smooth( se = FALSE)+ 
+  labs(
+    title = "Uncovering the relationship between highway gas mileage and cars' engine size",
+    subtitle = "What is the impact of cars' type on it?",
+    y = "Highway miles per gallon", x = "Engine displacement in litres",
+    color = "Types of cars "
+  ) 
+  
+```
+
+
+### Change scale color
+Color palette selection in charts can have a big impact on the chart readability for some individuals. Achromatopsia affects an estimated 1 in 30,000 people worldwide. By changing the color palette we can make an impact in those affected.
+```{r}
+library(ggthemes)# needed to load this package to change scale colors
+ggplot(data = mpg, mapping = aes(x = displ, y = hwy)) + 
+  geom_point(mapping = aes(color = class)) + 
+  geom_smooth( se = FALSE)+ 
+  labs(
+    title = "Uncovering the relationship between highway gas mileage and cars' engine size",
+    subtitle = "What is the impact of cars' type on it?",
+    y = "Highway miles per gallon", x = "Engine displacement in litres",
+    color = "Types of cars "
+  )  +
+  scale_color_colorblind()
+```
+
+### Change chart theme
+Finally, the theme you chose for your chart can have big impact on it. As always, the option in ggplot are many. I personally prefer simplicity in charts but you can really have fun with them (even without taking into account those available in ggplot extensions). See the list here [list of ggplot themes](https://ggplot2.tidyverse.org/reference/ggtheme.html) 
+```{r}
+ggplot(data = mpg, mapping = aes(x = displ, y = hwy)) + 
+  geom_point(mapping = aes(color = class)) + 
+  geom_smooth( se = FALSE)+ 
+  labs(
+    title = "Uncovering the relationship between highway gas mileage and cars' engine size",
+    subtitle = "What is the impact of cars' type on it?",
+    y = "Highway miles per gallon", x = "Engine displacement in litres",
+    color = "Types of cars "
+  )  +
+  scale_color_colorblind()+
+  theme_dark()#try classic, bw, minimal and linedraw as other nice alternatives
+```
+
+
+In past two weeks you have created charts in RStudio and you have discovered how powerful the ggplot2 package is. If you are passionate about visualizations try to create similar charts using datasets of your interest. Remember that practice makes perfect. Moreover, you always need to explore and get to know your data before making any modeling on them. Charts will help you in visually exploring the variables in your dataset and the relationships among them. Welcome to the magic world of visualizations!
+
+## Exploratory Data Analisis (EDA) in full circle [not in the exam]
+We can close the EDA circle by putting together all that we have learned so far. Meaning can we combine manipulations and visualizations together? Of course yes, in fact in many cases you need to combine them to achieving your goal. Here you can find a couple of examples that require manipulating your data before visualizing them:
+
+```{r}
+#Compute the avg_hwy per each class. Then visualize the average hwy per each class with a bar chart. Show a different filled color for each car class.
+mpg |> 
+  group_by(class) |> 
+  summarise(avg_hwy= mean(hwy)) |> 
+  ggplot(aes(y=avg_hwy,x= class, fill= class))+
+  geom_col()+
+  labs(
+    title = "Comparing types of cars' average highway gas mileage",
+    y = "Average highway miles per gallon", x = "Types of cars",
+    fill = "Types of cars "
+  )  +
+  scale_fill_colorblind()+
+  theme_light()
+
+#Compute the avg_fuel_efficiency of the cars in the dataset. Then visualize the relationship between average fuel efficiency and displ with a scatterplot and smoothing line plot. Make sure to keep in the dataset only cars that have average fuel efficiency above 20. Show a different shape per each car drive train. Show a different smoothing line color per each car drv.
+mpg |> 
+  mutate(avg_fuel_efficiency= (cty + hwy)/2) |> 
+  filter(avg_fuel_efficiency>20) |> 
+  ggplot(aes(y=avg_fuel_efficiency, x= displ))+
+  geom_point(aes(shape=drv), color="darkgreen")+
+  geom_smooth(aes(color=drv), se=F)+
+  labs(
+    title = "Uncovering the relationship between gas mileage and cars' engine size",
+    subtitle = "What is the impact of cars' drive train on it?",
+    y = "Average gas mileage", x = "Engine size in liters",
+    color = "Cars' drive train ", shape = "Cars' drive train "
+  )  +
+  scale_color_colorblind()+
+  theme_light()
+
+```
+

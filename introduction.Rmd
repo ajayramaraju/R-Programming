@@ -1,0 +1,192 @@
+---
+title: "Week 1 materials"
+author: "Biagio Palese"
+date: "`r format(Sys.time(), '%d %B, %Y')`" 
+output: 
+  html_document:
+    theme: flatly
+    toc: TRUE
+    toc_float: TRUE
+    code_download: TRUE
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE, cache = F}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  error = TRUE,
+  warning= FALSE,
+  message= FALSE)
+```
+
+## Intro to RStudio:
+
+The following sections of our book R for Data Science( [first portion of the course book](https://r4ds.hadley.nz) ) are included in the first week:
+
+-   [Introduction](https://r4ds.hadley.nz/intro)
+
+-   [Workflow basics](https://r4ds.hadley.nz/workflow-basics)
+
+-   [Workflow scripts and projects](https://r4ds.hadley.nz/workflow-scripts)
+
+### Link to other resources
+
+-   Internal help: [posit support](https://support.posit.co/hc/en-us)
+
+-   External help: [stackoverflow](https://stackoverflow.com/search?q=rstudio&s=25d8522e-3191-4bf2-ae3b-ccad762aeca9)
+
+-   Additional materials: [posit resources](https://posit.co/resources/)
+
+-   Cheat Sheets: [posit cheat sheets](https://posit.co/resources/cheatsheets/)
+
+While I use the book as a reference the materials provided to you are custom made and include more activities and resources. If you understand the materials covered in this document there is no need to refer to other sources. If you have any troubles with the materials don't hesitate to contact me or check the above sources.
+
+## Getting Started aka Running code in RStudio
+
+If you are running code interactively in the console you just need to enter commands after the prompt sign "\>". If you are running the code from this window (Script Editor) you can press Cmd(Mac)/Ctrl(Windows) + Enter to run a single line of code or highlight multiple line and then press Cmd/Ctrl + Enter.
+
+### Packages installation
+
+You will need to install the packages first before be able to use functions and datasets they contain. This is a one time task unless you uninstall R& RStudio or you change your computer.
+
+```{r}
+install.packages("tidyverse")# main package for the first part of the semester, it is a bundle package (meaning it contains multiple packages that have different purposes e.g., dplyr for manipulations, ggplot for visualizations)
+install.packages(
+  c("arrow", "babynames", "curl", "duckdb", "gapminder", 
+    "ggrepel", "ggridges", "ggthemes", "hexbin", "janitor", "Lahman", 
+    "leaflet", "maps", "nycflights13", "openxlsx", "palmerpenguins", 
+    "repurrrsive", "tidymodels", "writexl")
+  )#install multiple packages that will be useful throught the semester
+```
+
+### Load packages
+
+This is a critical task. Every time you open a new RStudio session you will need to load the packages. Failing to do so will incur in the most common errors among beginners (e.g., function not found or object not found)
+
+```{r}
+library(tidyverse)
+#Take careful note of the conflicts message that’s printed when you load the tidyverse. It tells you that dplyr overwrites some functions in base R. If you want to use the base version of these functions after loading dplyr, you’ll need to use their full names: stats::filter() and stats::lag().
+library(nycflights13)
+```
+
+### Need help
+
+If you are stuck promise me not to quit! You are a beginner so it will happen. Just pay attention to the error message and look at the below option to find a solution.
+
+```{r}
+#look into the R community or Stackoverflow
+#use help ribbon
+?library# help on a specific function
+example("sum")# example on how to use the function
+<- }#moreover if something is wrong with your code Rstudio will signal it to you.
+
+```
+
+## Workflow basic script
+
+You can use R as a calculator..
+
+```{r}
+#run basic calculations
+10 / 100 * 30
+(59 + 73 + 2) / 3
+sum(10 / 2, 3)
+
+```
+
+### Creating Object using the Assignement operator
+
+But it can do much more.. so we need to learn how to create and manage object using the assignment operator.
+
+```{r}
+class_size <- 48
+# "<-" # is the assign operator and it means you are assigning value to an object/variable. The shortcut option/alt + - will create the assign symbol
+```
+
+#### How to name your objects?
+
+Object names must start with a letter, and can only contain letters, numbers, \_ and .. You want your object names to be descriptive, so you'll need a convention for multiple words.
+
+```{r}
+welcome_to_rstudio<- "Welcome" #always use meaningful names but if they are long separate them with a _.
+welcome_to_rstudio# by running this line you are able to inspect the object/variable
+
+this_is_a_really_long_name_completely_unnecessary <- 2.5 # instead of writing the entire name learn that the tab key allows you to autocomplete
+this #try the autocompletion feature; we will cover other trick about the tab key later
+
+r_rocks <- 2 ^ 3
+#what happen if I run the following lines; why?
+r_rock
+R_rocks
+
+
+```
+
+#### Activity 1: Create objects by using the assignment operator (6 minutes) [write code just below each instruction, then paste the code in this week activity form:<https://forms.office.com/r/GaFSYL9bey>; finally use Teams RStudio - Forum channel for help on the activities/homework or if you have other questions]
+
+```{r}
+# An object named "today" that is equal to todays' date
+
+# An object named "forty" that is equal to 6*5 +10
+
+# An object named "basic_sum" that is equal to 1+2+3+4+5
+
+# Write also the code to print the today object
+
+```
+
+### Using functions
+
+Functions are the real reason why you should use R. There are too many functions to go over or even try remember. In fact, each package will give you access to a different set of functions and sometimes they will use the same name (e.g., remember the conflict with the filter function above). However, the good news is that you don't need to memorize them but understand how they work. Let's start with a basic example, how can we create a sequence of numbers in R?
+
+```{r}
+# we want to call the sequence function seq() but press tab and navigate all the functions that start with se
+se# Press TAB once more when you’ve selected the function you want. RStudio will add matching opening (() and closing ()) parentheses for you.
+y <- seq(1, 10, length.out = 5 #if a function is incomplete R will not think that you are done. Run it and see what happens. Press Esc if you want to discard the operation
+#keep in mind that unless your script generate an error the diagnostics (red cross next to the line of code) are there to help you but you can ignore them without any harm, in case the issue is only cosmetic.
+
+```
+
+#### Activity 2: Use basic functions (8 minutes) [write code just below each instruction, then paste the code in this week activity form:<https://forms.office.com/r/GaFSYL9bey>; finally use Teams RStudio - Forum channel for help on the activities/homework or if you have other questions]
+
+```{r}
+# Learn more about the sum function (hint: use the help feature covered today)
+
+# Use the sum function to compute the sum of all the numbers from 1 to 1000.
+
+# Assign the above function to an object named "my_first_function"
+
+# Print the object "my_first_function" 
+
+```
+
+### Workflow: projects
+
+Now let's create a project for this class. It is a good practice to keep all your project separated. In this way, once you reopen RStudio you access files and code only related to the project of interest. I recommend one project for this class but to create a new project if you use RStudio for other classes or project. Remember to call your project with a meaningful name and think carefully about which sub-directory you put the project in (Desktop is the easiest ;-)). If you don't store it somewhere sensible, it will be hard to find it in the future! Remember to also keep all the file of this class inside your project and to open always your project when you are in class. if you follow these tips will remove frustration and errors during the semester.
+
+#### Activity 3: Create a RStudio project for this class and use a meaningful name for it (8 minutes) [paste a screenshot that show the project name (available in the top right corner of the screen then paste it in this week activity form:<https://forms.office.com/r/GaFSYL9bey>; finally use Teams RStudio - Forum channel for help on the activities/homework or if you have other questions
+
+#### What is real?
+
+Your R scripts is "real". With your R scripts (and your data files), you can recreate the environment. It's much harder to recreate your R scripts from your environment! You'll either have to retype a lot of code from memory (making mistakes all the way) or you'll have to carefully mine your R history. For this reason it is good practice to not preserve your workspace between sessions: Save workspace between sections should be set to "Never"" in your project preferences.
+
+The following shortcuts will be valuable in the long run: Press Cmd/Ctrl + Shift + F10 to restart RStudio. Press Cmd/Ctrl + Shift + S to rerun the current script.
+
+#### Where does your analysis live?
+
+*[Do not cover in class but useful for those that are comfortable in navigating directories/folders on their computer]*
+
+R has a powerful notion of the working directory. This is where R looks for files that you ask it to load, and where it will put any files that you ask it to save. RStudio shows your current working directory at the top of the console. It is important that you know in which directory your project is located and how to navigate among directories using paths (absolute and relative). If a file that you want to use, is not in your working directory you will need to write the path necessary for R to access the file.
+
+```{r}
+getwd()# will also access your working directory
+```
+
+Paths and directories are a little complicated because there are two basic styles of paths: Mac/Linux and Windows. There are three chief ways in which they differ:
+
+The most important difference is how you separate the components of the path. Mac and Linux uses slashes (e.g. plots/diamonds.pdf) and Windows uses backslashes (e.g. plots\diamonds.pdf). R can work with either type (no matter what platform you're currently using), but unfortunately, backslashes mean something special to R, and to get a single backslash in the path, you need to type two backslashes! That makes life frustrating, so I recommend always using the Linux/Mac style with forward slashes.
+
+Absolute paths (i.e. paths that point to the same place regardless of your working directory) look different. In Windows they start with a drive letter (e.g. C:) or two backslashes (e.g. \\servername) and in Mac/Linux they start with a slash "/" (e.g. /users/biagio). You should never use absolute paths in your scripts, because they hinder sharing: no one else will have exactly the same directory configuration as you.
+
+The last minor difference is the place that \~ points to. \~ is a convenient shortcut to your home directory. Windows doesn't really have the notion of a home directory, so it instead points to your documents directory.

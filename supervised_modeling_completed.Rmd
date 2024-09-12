@@ -1,0 +1,476 @@
+---
+title: "Week 11 materials"
+author: "Biagio Palese"
+date: "`r format(Sys.time(), '%d %B, %Y')`" 
+output: 
+  html_document:
+    theme: flatly
+    toc: TRUE
+    toc_float: TRUE
+    code_download: TRUE
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE, cache = F}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  error = TRUE,
+  warning= FALSE,
+  message= FALSE)
+```
+
+# Introduction to modeling
+
+In the second part of the course we will leverage the following resources:
+
+-   The Tidy Modeling with R book [second portion of the course book](https://www.tmwr.org)
+-   The Tidy Models website [second portion of the course website](https://www.tidymodels.org)
+
+#### Link to other resources
+
+-   Internal help: [posit support](https://support.posit.co/hc/en-us)
+
+-   External help: [stackoverflow](https://stackoverflow.com/search?q=rstudio&s=25d8522e-3191-4bf2-ae3b-ccad762aeca9)
+
+-   Additional materials: [posit resources](https://posit.co/resources/)
+
+-   Cheat Sheets: [posit cheat sheets](https://posit.co/resources/cheatsheets/)
+
+While I use them as a reference the materials provided to you are custom made and include more activities and resources. If you understand the materials covered in this document there is no need to refer to other sources. If you have any troubles with the materials don't hesitate to contact me or check the above sources.
+
+![Data Science model: Artwork by @allison_horst](environmental-data-science-r4ds-general.png)
+
+### Class Objectives
+
+-   Introduce the `tidymodels` framework, highlighting its comprehensive ecosystem designed to streamline the predictive modeling process in R.
+-   Establish a foundational modeling workflow using `tidymodels`, emphasizing practical application through the exploration of the `ames` dataset.
+
+# Recap
+## Introduction to tidymodels
+
+`tidymodels` is a collection of R packages that provides a comprehensive framework for modeling, designed to work seamlessly within the tidyverse ecosystem. It simplifies and standardizes the process of building, tuning, and evaluating models, making predictive modeling more accessible and reproducible.
+
+### Part 1: Introduction to the `tidymodels` ecosystem
+
+The ecosystem includes packages like:
+
+-   **`recipes`: Data Preprocessing**
+    -   Facilitates the creation of preprocessing steps for data, including feature engineering, normalization, and handling missing values.
+    -   Enables the specification of a series of preprocessing operations to prepare data for modeling systematically.
+-   **`parsnip`: Model Specification**
+    -   Provides a unified interface to specify a wide array of models from different packages without getting into package-specific syntax.
+    -   Allows for easy model switching and comparison by standardizing model syntax.
+-   **`workflows`: Streamlining Model Fitting**
+    -   Combines model specifications and preprocessing recipes into a single object, simplifying the process of model training and prediction.
+    -   Ensures that the preprocessing steps are applied consistently during both model training and prediction phases.
+-   **`tune`: Hyperparameter Optimization**
+    -   Supports the tuning of model hyperparameters to find the optimal model configuration.
+    -   Integrates with `resampling` methods to evaluate model performance across different hyperparameter settings systematically.
+-   **`yardstick`: Model Evaluation**
+    -   Offers a suite of functions to calculate performance metrics for models, such as accuracy, RMSE, and AUC, among others.
+    -   Allows for a consistent and straightforward way to assess and compare model performance.
+-   **`broom`: Tidying Model Outputs**
+    -   Helps in converting model outputs into tidy formats, making them easier to work with within the tidyverse.
+    -   Provides functions to extract model statistics, performance measures, and other relevant information in a user-friendly structure.
+
+Each component of the `tidymodels` ecosystem is designed to address specific aspects of the model building and evaluation process, making it easier for data scientists to develop, tune, and deploy models efficiently and effectively. Together, these packages offer a comprehensive framework that enhances the modeling workflow in R, adhering to the principles of tidy data and reproducible research.
+
+#### So, why `tidymodels`?
+
+-   **Consistency:** Offers a unified interface for various modeling tasks.
+-   **Integration:** Fully compatible with `tidyverse` packages for data manipulation and visualization.
+-   **Flexibility:** Supports a wide range of statistical and machine learning models.
+
+## The `tidymodels` Ecosystem in action
+
+After this theoretical introduction let's check the `tidymodels` ecosystem in action with an overview of the , highlighting its components like `recipes`, `parsnip`, `workflows`, etc., and how it integrates with the `tidyverse`.
+
+#### Installing and Loading `tidymodels`
+
+```{r}
+#install.packages("tidymodels")
+library(tidymodels)
+```
+
+#### Exploring the `ames` Dataset
+
+Introduce the `ames` housing data as an example. Briefly explore the dataset to understand the variables and the modeling objective (predicting house prices).
+
+```{r}
+data(ames, package = "modeldata")
+?ames
+glimpse(ames)
+view(ames)
+```
+
+The `ames` housing dataset will be used as a case study for regression analysis, demonstrating the practical application of predictive modeling techniques.
+
+# End of recap
+
+### Part 2: Data Preprocessing with `recipes`
+
+![Recipes: Artwork by @allison_horst](recipes.png)
+
+Let's delve into the concept of a recipe in the context of data preprocessing within the `tidymodels` framework, followed by creating a simple recipe for the `ames` dataset.
+
+#### Understanding the Concept of a Recipe in Data Preprocessing
+
+In the `tidymodels` ecosystem, a recipe is a blueprint that outlines how to prepare your data for modeling. It's a series of instructions or steps that transform raw data into a format more suitable for analysis, ensuring that the preprocessing is systematic and reproducible. Here’s why recipes are pivotal in the data science workflow:
+
+-   **Standardization and Normalization:** Recipes can include steps to scale or standardize numerical data, ensuring that variables are on comparable scales and normally distributed. Main functions:
+    -   step_log() –\> Applies log transformation
+    -   step_normalize() –\> Normalizes predictors by standardizing them (mean 0, sd1)
+    -   step_scale() –\> Normalizes predictors by scaling them (sd 1)
+-   **Handling Missing Data:** They allow you to specify methods for imputing missing values, ensuring the model uses a complete dataset for training. Main functions:
+    -   step_impute_median() –\> Imputes missing numeric values with the median
+    -   step_impute_mean() –\> Imputes missing numeric values with the average
+-   **Encoding Categorical Variables:** Recipes describe how to convert categorical variables into a format that models can understand, typically through one-hot encoding or other encoding strategies. Main functions:
+    -   step_dummy() –\> Creates dummy variables for categorical predictors
+    -   step_other() –\> Collapses infrequent factors into an "other" category
+-   **Feature Engineering:** A recipe can include steps for creating new features from existing ones, enhancing the model's ability to learn from the data. Main functions:
+    -   step_mutate() –\> Creates a new feature from an existing one
+    -   step_interact() –\> Creates interaction terms between features
+-   **Data Filtering and Selection:** They can also be used to select specific variables or filter rows based on certain criteria, tailoring the dataset to the modeling task. Main functions:
+    -   step_select() –\> Selects specific variables to retain in the dataset
+    -   step_slice() –\> Selects a subset of rows
+
+By defining these steps in a recipe, you create a reproducible set of transformations that can be applied to any dataset of the same structure. This reproducibility is crucial for maintaining the integrity of your modeling process, especially when moving from a development environment to production.
+
+#### Creating a Simple Recipe for the `ames` Dataset
+
+Let's create a basic recipe for the `ames` housing dataset, focusing on preprocessing steps that are commonly required for this type of data. Our goal is to predict house sale prices, so we'll include steps to log-transform the target variable (to address skewness) and normalize the numerical predictors.
+
+![Normalize Distribution and More: Artwork by Allison Horst](normal.png)
+
+```{r}
+
+# Define the recipe
+ames_recipe <- recipe(Sale_Price ~ ., data = ames) |>
+  # Log-transform the Sale_Price to normalize its distribution
+  step_log(Sale_Price, base = 10) |>
+  # Normalize numerical predictors
+  step_normalize(all_numeric_predictors()) |>
+  # Prepare for modeling by converting factor variables into dummy variables
+  step_dummy(all_nominal_predictors())
+
+# Review the recipe steps
+ames_recipe
+```
+
+This recipe outlines a series of preprocessing steps tailored to the `ames` dataset:
+
+-   The `step_log()` function applies a log transformation to the `Sale_Price`, which is a common technique to normalize the distribution of the target variable in regression tasks.
+
+-   The `step_normalize()` function standardize numerical predictors, ensuring they contribute equally to the model's predictions.
+
+-   The `step_dummy()` function converts categorical variables into a series of binary (0/1) columns, enabling models to incorporate this information.
+
+By preparing the data with this recipe, we enhance the dataset's suitability for predictive modeling, improving the potential accuracy and interpretability of the resulting models.
+
+Recipes in `tidymodels` provide a flexible and powerful way to specify and execute a series of data preprocessing steps, ensuring that your data science workflow is both efficient and reproducible.
+
+##### Activity 1: Preprocessing with Recipes. Write the code to complete the below tasks [write code just below each instruction, finally use Teams RStudio - Forum channel for help or if you have other questions] - 10 minutes
+
+```{r}
+
+# Start your recipe with predicting Sale_Price from all other variables
+ames_recipe2 <- recipe(Sale_Price ~ ., data = ames)
+
+# a. Standardize the 'Gr_Liv_Area', and impute missing values for 'Lot_Frontage' with median, and for 'Garage_Type' with mean.
+ames_recipe2 <- ames_recipe2 |>
+  step_normalize(Gr_Liv_Area) |> 
+  step_impute_median(Lot_Frontage) |> 
+  step_impute_mean(Garage_Type)
+  
+  
+
+# b. Create dummy variables for 'Neighborhood', and normalize 'Year_Built'.
+ames_recipe2 <- ames_recipe2 |>
+  step_dummy(Neighborhood) |> 
+  step_normalize(Year_Built)
+
+
+# c. Create an interaction term between 'Overall_Qual' and 'Gr_Liv_Area' and standardize the Lot_Area variable.
+ames_recipe2 <- ames_recipe2 |>
+  step_interact(~Overall_Qual:Gr_Liv_Area) |> 
+  step_normalize(Lot_Area)
+  
+
+# d. Use recipe to keep only 'Sale_Price', 'Overall_Qual', 'Gr_Liv_Area', 'Year_Built', and slice the dataset to select 500 of the rows.
+ames_recipe2 <- ames_recipe2 |>
+  step_select(Sale_Price, Overall_Qual, Gr_Liv_Area,Year_Built ) |> 
+  step_slice(1:500)
+
+ames_recipe2 <- ames_recipe2 |>  
+  step_normalize(Gr_Liv_Area) |> 
+  step_impute_median(Lot_Frontage) |> 
+  step_impute_mean(Garage_Type) |> 
+  step_dummy(Neighborhood) |> 
+  step_normalize(Year_Built) |> 
+  step_interact(~Overall_Qual:Gr_Liv_Area) |> 
+  step_normalize(Lot_Area) |> 
+  step_select(Sale_Price, Overall_Qual, Gr_Liv_Area,Year_Built ) |> 
+  step_slice(1:500)
+#use prep and bake to check outcome of your preprocessing
+
+?prep()
+?bake()
+```
+
+
+### Part 3: Building Supervised Models with `parsnip` in `tidymodels`
+
+The `parsnip` package is a cornerstone of the `tidymodels` ecosystem designed to streamline and unify the process of model specification across various types of models and machine learning algorithms. Unlike traditional approaches that require navigating the syntax and idiosyncrasies of different modeling functions and packages, `parsnip` abstracts this complexity into a consistent and intuitive interface. Here's why `parsnip` stands out:
+
+-   **Unified Interface:** `parsnip` offers a single, cohesive syntax for specifying a wide range of models, from simple linear regression to complex ensemble methods and deep learning. This uniformity simplifies learning and reduces the cognitive load when switching between models or trying new methodologies. Main models:
+
+#### **Regression Models**
+
+**Linear Regression:**
+
+**When to Use:** Ideal for predicting continuous outcomes when the relationship between independent variables and the dependent variable is linear.
+
+**Example:** Predicting house prices based on attributes like size (square footage), number of bedrooms, and age of the house.
+
+```{r}
+linear_reg() |>
+  set_engine("lm") |>
+  set_mode("regression")
+```
+
+**Ridge Regression:**
+
+**When to Use:** Useful when dealing with multicollinearity (independent variables are highly correlated) in your data or when you want to prevent overfitting by adding a penalty (L2 regularization) to the size of coefficients.
+
+**Example:** Predicting employee salaries using a range of correlated features like years of experience, level of education, and job role.
+
+```{r}
+linear_reg(penalty = 0.1, mixture = 0) |>
+  set_engine("glmnet") |>
+  set_mode("regression")
+```
+
+**Lasso Regression:**
+
+**When to Use:** Similar to Ridge regression but can shrink some coefficients to zero, effectively performing variable selection (L1 regularization). Useful for models with a large number of predictors, where you want to identify a simpler model with fewer predictors.
+
+**Example:** Selecting the most impactful factors affecting the energy efficiency of buildings from a large set of potential features.
+
+```{r}
+linear_reg(penalty = 0.1, mixture = 1) |>
+  set_engine("glmnet") |>
+  set_mode("regression")
+```
+
+#### **Classification Models**
+
+**Logistic Regression:**
+
+**When to Use:** Suited for binary classification problems where you predict the probability of an outcome that can be one of two possible states.
+
+**Example:** Determining whether an email is spam or not based on features like the frequency of certain words, sender reputation, and email structure.
+
+```{r}
+logistic_reg() |>
+  set_engine("glm") |>
+  set_mode("classification")
+```
+
+**Support Vector Machines (SVM):**
+
+**When to Use:** Effective for both binary and multiclass classification problems, especially in cases where the boundary between classes is not linear. SVMs can use kernel functions to transform the input space and find an optimal boundary.
+
+**Example:** Classifying images of animals into different categories where the distinction between categories is complex.
+
+```{r}
+svm_linear() |>
+  set_engine("kernlab") |>
+  set_mode("classification")
+```
+
+**Tree-Based Models:**
+
+-   **Decision Tree:**
+
+**When to Use:** Good for classification and regression with a dataset that includes non-linear relationships. Decision trees are interpretable and can handle both numerical and categorical data.
+
+**Example:** Predicting customer churn based on a variety of customer attributes such as usage patterns, service complaints, and demographic information.
+
+```{r}
+decision_tree() |>
+  set_engine("rpart") |>
+  set_mode("classification")  # or "regression"
+```
+
+-   **Gradient Boosted Models:**
+
+**When to Use:** When you require a robust predictive model for both regression and classification that can automatically handle missing values and does not require scaling of data. It builds trees in a sequential manner, minimizing errors from previous trees.
+
+**Example:** Winning Kaggle competitions by predicting with high accuracy complex outcomes such as future sales amounts across different stores and products.
+
+```{r}
+boost_tree() |>
+  set_engine("xgboost") |>
+  set_mode("classification")  # or "regression"
+```
+
+**Random Forest:**
+
+**When to Use:** Suitable for scenarios where high accuracy is crucial, and the model can handle being a "black box." Works well for both classification and regression tasks and is robust against overfitting.
+
+**Example:** Diagnosing diseases from patient records where there's a need to consider a vast number of symptoms and test results.
+
+```{r}
+rand_forest(mtry = 2, trees = 1000) |>
+  set_engine("ranger") |>
+  set_mode("classification")
+```
+
+#### Deep Learning
+
+-   **Neural Network:**
+
+**When to Use:** Best for capturing complex, nonlinear relationships in high-dimensional data. Neural networks excel in tasks like image recognition, natural language processing, and time series prediction.
+
+**Example:** Recognizing handwritten digits where the model needs to learn from thousands of examples of handwritten digits.
+
+```{r}
+mlp() |>
+  set_engine("keras") |>
+  set_mode("regression")  # or "classification"
+```
+
+Each of these model functions can be specified with `parsnip`'s unified interface, allowing you to easily switch between them or try new models with minimal syntax changes. The choice of model and the specific parameters (`penalty`, `mtry`, `trees`, etc.) should be guided by the nature of your data, the problem at hand, and possibly iterative model tuning processes like cross-validation.
+
+-   **Engine Independence:** Behind the scenes, many models can be fitted using different computational engines (e.g., `lm`, `glmnet`, `ranger`). `parsnip` allows you to specify the model once and then choose the computational engine separately, providing flexibility and making it easy to compare the performance of different implementations.
+
+-   **Integration with `tidymodels`:** `parsnip` models seamlessly integrate with other `tidymodels` packages, such as `recipes` for data preprocessing, `workflows` for bundling preprocessing and modeling steps, and `tune` for hyperparameter optimization.
+
+#### Starting Simple: Specifying a Linear Regression Model Using `parsnip`
+
+![Parsnip: Artwork by @allison_horst](parsnip.png)
+
+Linear regression is one of the most fundamental statistical and machine learning methods, used for predicting a continuous outcome based on one or more predictors. Let's specify a linear regression model using `parsnip` for the `ames` housing dataset, aiming to predict the sale price of houses from their characteristics.
+
+```{r}
+# Specify a linear regression model
+linear_mod <- linear_reg() |>
+  set_engine("lm") |>
+  set_mode("regression")
+
+# Review the model specification
+linear_mod
+```
+
+In this specification:
+
+-   `linear_reg()` initiates the specification of a linear regression model. At this stage, we're defining the type of model but not yet fitting it to data.
+
+-   `set_engine("lm")` selects the computational engine to use for fitting the model. Here, we use `"lm"`, which stands for linear models, a base R function well-suited for fitting these types of models.
+
+-   `set_mode("regression")` indicates that we are performing a regression task, predicting a continuous outcome.
+
+This process outlines the model we intend to use without binding it to specific data. The next steps typically involve integrating the prepared data (using a recipe), fitting the model to training data, and evaluating its performance. `parsnip`'s design makes these steps straightforward and consistent across different types of models, enhancing the reproducibility and scalability of your modeling work. Through the abstraction provided by `parsnip`, model specification becomes not only more straightforward but also more adaptable to different contexts and needs, facilitating a smoother workflow in predictive modeling projects.
+
+##### Activity 2: Exploring modeling with parsnip. Write the code to complete the tasks below [write code just below each instruction; for help or queries, use Teams RStudio - Forum channel] - 10 minutes
+
+```{r}
+# a. Fit a linear regression model (lm) predicting 'Sale_Price' using 'Lot_Area'
+linear_reg() |> 
+  set_engine("lm") |> 
+  set_mode("regression")
+# b. Fit a linear regression model (lm) predicting 'Sale_Price' using 'Gr_Liv_Area' and 'Lot_Area'
+linear_reg() |> 
+  set_engine("lm") |> 
+  set_mode("regression")
+# c.  Fit a decision tree model to predict 'Sale_Price' using 'Lot_Area' and 'Year_Built'.
+reg_decision_tree <- decision_tree() |> 
+  set_engine("rpart") |>
+  set_mode("regression")
+# d. Fit a decision tree mode model (lm) predicting 'Sale_Price' using 'Gr_Liv_Area' and 'Lot_Area'
+decision_tree() |> 
+  set_engine("rpart") |> 
+  set_mode("regression")
+```
+
+### Part 4: Integrating Preprocessing and Modeling with `workflows`
+
+The `workflows` package is a powerful component of the `tidymodels` ecosystem designed to streamline the modeling process. It provides a cohesive framework that binds together preprocessing steps (recipe) and model specifications (parnship) into a single, unified object. This integration enhances the modeling workflow by ensuring consistency, reproducibility, and efficiency.
+
+#### Key Advantages of Using `workflows`:
+
+-   **Unified Process:** By encapsulating both preprocessing (e.g., feature engineering, normalization) and modeling within a single object, `workflows` simplifies the execution of the entire modeling pipeline. This unified approach reduces the risk of mismatches or errors between the data preprocessing and modeling stages.
+
+-   **Reproducibility:** `workflows` makes your analysis more reproducible by explicitly linking preprocessing steps to the model. This linkage ensures that anyone reviewing your work can see the complete path from raw data to model outputs.
+
+-   **Flexibility and Efficiency:** It allows for easy experimentation with different combinations of preprocessing steps and models. Since preprocessing and model specification are encapsulated together, switching out components to test different hypotheses or improve performance becomes more streamlined.
+
+#### Building and Fitting a Model Using `workflows`
+
+To demonstrate the practical application of `workflows`, let's consider the `ames` housing dataset, where our goal is to predict house sale prices based on various features. We'll use the linear regression model specified with `parsnip` and a preprocessing recipe developed with `recipes`.
+
+```{r}
+# Assume `ames_recipe` a recipe object created for preprocessing is in your environment
+# and that `linear_mod` is a linear regression model specified with `parsnip` is also available in your environment
+
+# Create the workflow by combining the recipe and model
+ames_workflow <- workflow() |>
+  add_recipe(ames_recipe) |>
+  add_model(linear_mod)
+
+# Fit the workflow to the Ames housing data
+ames_fit <- fit(ames_workflow, data = ames)
+
+# Review the fitted workflow
+ames_fit
+
+# Review the fitted workflow
+ames_fit
+ames_fit %>% tidy() #check values
+ames_fit %>% tidy() %>% print(n=Inf)# check all values
+ames_fit %>% tidy() %>% view()# check all values in a new window
+
+#a. Fit a linear regression model (lm) predicting 'Sale_Price' using 'Lot_Area'
+recipe_2a <- recipe(Sale_Price ~ Lot_Area, data = ames ) |> 
+  step_log(Sale_Price) |> 
+  step_normalize(Lot_Area)
+ames_workflow_2a <- workflow() |>
+  add_recipe(recipe_2a) |>
+  add_model(linear_mod)
+fit(ames_workflow_2a, data=ames) |> tidy()
+```
+
+In this process:
+
+-   We start by creating a new `workflow` object, to which we add our previously defined preprocessing recipe (`ames_recipe`) and linear regression model (`linear_mod`).
+
+-   The `add_recipe()` and `add_model()` functions are used to incorporate the preprocessing steps and model specification into the workflow, respectively.
+
+-   The `fit()` function is then used to apply this workflow to the `ames` dataset, executing the preprocessing steps on the data before fitting the specified model.
+
+-   The result is a fitted model object that includes both the preprocessing transformations and the model's learned parameters, ready for evaluation or prediction on new data.
+
+This example underscores how `workflows` elegantly combines data preprocessing and model fitting into a cohesive process, streamlining the journey from raw data to actionable insights. By leveraging `workflows`, data scientists can maintain a clear, organized, and efficient modeling pipeline. `workflows` epitomizes the philosophy of `tidymodels` in promoting clean, understandable, and reproducible modeling practices. Through its structured approach to integrating preprocessing and modeling, `workflows` facilitates a seamless transition across different stages of the predictive modeling process. We will ignore the results interpretation for now because we don't know how to evaluate the models yet but you can see how simple it is to create and run a modeling workflow.
+
+Building on what you have so far for Part 4 and moving towards a more detailed exploration of comparing different model engines with `parsnip`, let's refine and expand this section. This expansion will include evaluating the models and interpreting their results to provide a clearer, more instructive view on the practical application and assessment within a predictive modeling framework.
+
+##### **Activity 3: Modeling with Workflow. Write the code to complete the tasks below [write code just below each instruction; for help or queries, use Teams RStudio - Forum channel] - 5 minutes**
+
+```{r}
+#a.  Define a recipe for preprocessing: standardize 'Gr_Liv_Area' and encode 'Neighborhood' as dummy variables.  Specify a linear regression model using 'lm' engine. Create a workflow, add the recipe and model, then fit the workflow to the ames data.
+recipe_3a <- recipe(Sale_Price ~ Gr_Liv_Area + Neighborhood, data = ames) |> 
+  step_log(Sale_Price) |> 
+  step_normalize(Gr_Liv_Area) |> 
+  step_dummy(Neighborhood)
+workflow3a <- workflow() |> 
+  add_recipe(recipe_3a) |> 
+  add_model(linear_mod)
+fit(workflow3a, data = ames) |> tidy()
+#Skip_for_now b.  Define a recipe for preprocessing: compute Total_flr_SF =First_Flr_SF+ Second_Flr_SF and encode 'MS_SubClass' to make sure that infrequent values fall inside the other category.  Specify a decision tree model. Create a workflow, add the recipe and model, then fit the workflow to the ames data.
+
+#c.  Define a recipe for preprocessing: scale 'Lot_Area' and sample only 500 rows.  Specify a linear regression model using 'glmnet' engine. Create a workflow, add the recipe and model, then fit the workflow to the ames data.
+
+#d.Skip_for_now  Define a recipe for preprocessing: log transform 'Lot_Frontage' and encode all nominal variables as dummy variables.  Specify a decision tree model. Create a workflow, add the recipe and model, then fit the workflow to the ames data.
+
+```
